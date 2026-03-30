@@ -1,0 +1,67 @@
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css";
+@import "nativewind/theme";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+    --background: #ffffff;
+    --foreground: #1a1a1a;
+    --dead-zone: #12110f;
+
+    --primary: #527bda;
+    --accent: #ea7a53;
+    --muted: #f6eecf;
+    --muted-foreground: #666666;
+    --border: #e5e5e5;
+
+    --success: #16a34a;
+    --destructive: #dc2626;
+}
+
+.dark {
+    --background: #000000;
+    --foreground: #ffffff;
+    --dead-zone: #000000;
+
+    --primary: #527bda;
+    --accent: #f97316;
+    --muted-foreground: #999999;
+    --muted: #1e293b;
+    --border: #252b32;
+}
+
+@theme inline {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-dead-zone: var(--dead-zone);
+
+    --color-primary: var(--primary);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+
+    --color-muted: var(--muted);
+    --color-border: var(--border);
+
+    --color-success: var(--success);
+    --color-destructive: var(--destructive);
+
+    --spacing-1: 4px;
+    --spacing-2: 8px;
+    --spacing-3: 12px;
+    --spacing-4: 16px;
+    --spacing-5: 20px;
+    --spacing-6: 24px;
+    --spacing-8: 32px;
+    --spacing-10: 40px;
+    --spacing-12: 48px;
+}
+
+@utility shadow-subtle {
+    shadow-color: #000;
+    shadow-offset: 0px 2px;
+    shadow-opacity: 0.05;
+    shadow-radius: 4px;
+    elevation: 2;
+}
