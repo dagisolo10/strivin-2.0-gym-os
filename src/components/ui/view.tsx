@@ -1,7 +1,11 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { ScrollView, Text, TextProps, View, ViewProps } from "react-native";
+import { styled } from "nativewind";
+import { Text, TextProps, View, ViewProps } from "react-native";
+import { ScrollView, GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
+
+const SafeAreaView = styled(RNSafeAreaView);
 
 interface ThemedViewProps extends ViewProps {
     className?: string;
@@ -12,13 +16,13 @@ interface TypographyProps extends TextProps {
 }
 
 export const Screen = ({ className, children, ...props }: ThemedViewProps) => (
-    <View className="bg-dead-zone dark flex-1">
-        <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView className="bg-dead-zone dark flex-1">
+        <GestureHandlerRootView>
             <ScrollView className={cn("bg-background")} contentContainerStyle={{ flexGrow: 1 }} {...props}>
-                <View className={cn("flex-1", className)}>{children}</View>
+                <Div className={cn("flex-1", className)}>{children}</Div>
             </ScrollView>
-        </SafeAreaView>
-    </View>
+        </GestureHandlerRootView>
+    </SafeAreaView>
 );
 
 export const Div = ({ className, ...props }: ThemedViewProps) => <View className={cn("border-border", className)} {...props} />;
@@ -33,4 +37,4 @@ export const H2 = ({ className, ...props }: TypographyProps) => <Text className=
 export const H3 = ({ className, ...props }: TypographyProps) => <Text className={cn("text-foreground text-2xl font-semibold", className)} {...props} />;
 export const P = ({ className, ...props }: TypographyProps) => <Text className={cn("text-foreground text-base", className)} {...props} />;
 export const Lead = ({ className, ...props }: TypographyProps) => <Text className={cn("text-muted-foreground text-lg", className)} {...props} />;
-export const Label = ({ className, ...props }: TypographyProps) => <Text className={cn("text-muted-foreground mb-1.5 ml-1 font-semibold", className)} {...props} />;
+export const Label = ({ className, ...props }: TypographyProps) => <Text className={cn("text-muted-foreground my-1.5 ml-1 font-semibold", className)} {...props} />;

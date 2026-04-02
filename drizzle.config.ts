@@ -1,8 +1,11 @@
 import { defineConfig } from "drizzle-kit";
 
 export default defineConfig({
-    schema: "./src/db/schema.ts",
+    schema: "./src/db/sqlite.ts",
     out: "./src/drizzle",
     dialect: "sqlite",
-    driver: "expo"
+    driver: "expo",
+    dbCredentials: {
+        url: "gym.db",
+    },
 });
