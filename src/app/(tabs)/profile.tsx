@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import * as schema from "@/db/sqlite";
 import { useSQLiteContext } from "expo-sqlite";
 import { NavLink } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { drizzle, useLiveQuery } from "drizzle-orm/expo-sqlite";
 
 export default function Profile() {
     const db = useSQLiteContext();
-    const drizzleDB = drizzle(db, { schema });
+    const drizzleDB = useMemo(() => drizzle(db, { schema }), [db]);
 
     const user = useLiveQuery(drizzleDB.query.users.findFirst({ with: { plans: { with: { days: { with: { exercises: true } } } } } }));
 

@@ -27,11 +27,11 @@ export default function Exercises() {
             type: isEndurance ? "Cardio" : "Push",
             variant: isEndurance ? "Endurance" : "Upper",
             unit: isEndurance ? "km" : "kg",
-            sets: isEndurance ? undefined : 0,
-            reps: isEndurance ? undefined : 0,
-            weight: isEndurance ? undefined : 0,
-            distance: isEndurance ? 0 : undefined,
-            duration: isEndurance ? 0 : undefined,
+            sets: isEndurance ? undefined : 3,
+            reps: isEndurance ? undefined : 12,
+            weight: isEndurance ? undefined : 10,
+            distance: isEndurance ? 5 : undefined,
+            duration: isEndurance ? 30 : undefined,
         };
     };
 
@@ -69,7 +69,7 @@ function DayAssignment({ control, index, workoutDays }: All & { workoutDays: str
                 <Controller
                     name={`exercises.${index}.workoutDays`}
                     control={control}
-                    defaultValue={workoutDays}
+                    defaultValue={[]}
                     render={({ field: { value = [], onChange }, fieldState: { error } }) => (
                         <Div className="flex-1">
                             <Row className="flex-wrap gap-2">

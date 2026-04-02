@@ -13,6 +13,9 @@ export const users = pgTable("users", {
 
 export const workoutPlans = pgTable("workout_plans", {
     id: serial("id").primaryKey(),
+    userId: integer("user_id")
+        .references(() => users.id, { onDelete: "cascade" })
+        .notNull(),
     workoutDaysPerWeek: integer("days_per_week").notNull(),
     split: text("split").$type<WorkoutSplit>().notNull(),
     goal: text("goal").$type<Goal>(),
@@ -49,6 +52,9 @@ export const exercises = pgTable("exercises", {
 
 export const workoutSessions = pgTable("workout_sessions", {
     id: serial("id").primaryKey(),
+    userId: integer("user_id")
+        .references(() => users.id, { onDelete: "cascade" })
+        .notNull(),
     date: timestamp("date").defaultNow().notNull(),
     perfectDay: boolean("perfect_day").default(false).notNull(),
 });

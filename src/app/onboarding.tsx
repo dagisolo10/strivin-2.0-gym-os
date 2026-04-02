@@ -45,7 +45,7 @@ export default function Onboarding() {
         if (step === TOTAL_STEPS) {
             try {
                 console.log("Saving to SQLite:", { ...currentValues, profile });
-                await registerUser({ ...currentValues } as any);
+                await registerUser(currentValues as any);
                 router.replace("/(tabs)/profile");
             } catch (error) {
                 console.error("Failed to save onboarding data:", error);

@@ -20,15 +20,13 @@ export interface Exercise {
     variant: ExerciseVariant;
 }
 
-//
-
 export interface User {
     id: string;
     name: string;
     createdAt: Date;
 }
 
-interface WorkoutDay {
+export interface WorkoutDay {
     id: string;
     dayName: string;
     exercises: Exercise[];

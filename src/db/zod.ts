@@ -18,8 +18,8 @@ const exerciseSchema = z.object({
 });
 
 export const onboardingSchema = z.object({
-    name: z.string().min(2, "Name is too short"),
-    split: z.string().min(1, "What's your split called?"),
+    name: z.string().trim().min(2, "Name is too short"),
+    split: z.string().trim().min(1, "What's your split called?"),
     workoutDays: z.array(z.string()).min(1, "Pick at least one day"),
     exercises: z.array(exerciseSchema).optional(),
     goal: z.string().optional(),
