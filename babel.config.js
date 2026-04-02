@@ -10,11 +10,11 @@ module.exports = function (api) {
                 {
                     root: ["./"],
                     alias: {
-                        "@": "./src"
-                    }
-                }
+                        "@": "./src",
+                    },
+                },
             ],
-            "react-native-reanimated/plugin"
-        ]
+            "react-native-reanimated/plugin",
+        ],
     };
 };

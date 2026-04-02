@@ -1,11 +1,11 @@
 {
     "expo": {
-        "name": "Flight",
-        "slug": "Flight",
+        "name": "Strivin",
+        "slug": "Strivin",
         "version": "1.0.0",
         "orientation": "portrait",
         "icon": "./assets/images/icon.png",
-        "scheme": "flight",
+        "scheme": "strivin",
         "userInterfaceStyle": "automatic",
         "ios": {
             "supportsTablet": true
@@ -37,7 +37,8 @@
                     }
                 }
             ],
-            "expo-sqlite"
+            "expo-sqlite",
+            "expo-build-properties"
         ],
         "experiments": {
             "typedRoutes": true,

@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
-import { Link } from "expo-router";
 import * as Haptics from "expo-haptics";
+import { Link, LinkProps } from "expo-router";
 import { VariantProps, cva } from "class-variance-authority";
 import { PressableProps, GestureResponderEvent, Pressable, Text, TextInput, TextInputProps } from "react-native";
 
@@ -59,12 +59,12 @@ export const Button = ({ variant = "primary", size = "default", children, classN
     );
 };
 
-export const NavLink = ({ children, href, className }: { children: React.ReactNode; href: string; className?: string }) => (
-    <Link href={href as any} asChild>
+export const NavLink = ({ children, href, className, textClassName }: { children: React.ReactNode; href: LinkProps["href"]; className?: string; textClassName?: string }) => (
+    <Link href={href} asChild>
         <Pressable className={cn("active:opacity-70", className)}>
-            <Text className="text-accent font-medium">{children}</Text>
+            <Text className={cn("text-accent font-medium", textClassName)}>{children}</Text>
         </Pressable>
     </Link>
 );
 
-export const Input = ({ className, ...props }: TextInputProps & { className?: string }) => <TextInput placeholderTextColor="#999999" className={cn("border-border bg-background text-foreground h-12 w-full rounded-xl border px-8", className)} {...props} />;
+export const Input = ({ className, ...props }: TextInputProps & { className?: string }) => <TextInput placeholderTextColor="#999999" className={cn("border-border bg-background text-foreground h-12 w-full rounded-xl border pl-4", className)} {...props} />;

@@ -27,7 +27,7 @@
 
     --primary: #527bda;
     --accent: #f97316;
-    --muted-foreground: #999999;
+    --muted-foreground: #b3b3b3;
     --muted: #1e293b;
     --border: #252b32;
 }
@@ -58,10 +58,19 @@
     --spacing-12: 48px;
 }
 
-@utility shadow-subtle {
-    shadow-color: #000;
-    shadow-offset: 0px 2px;
-    shadow-opacity: 0.05;
-    shadow-radius: 4px;
-    elevation: 2;
+@layer components {
+    .row {
+        @apply flex-row items-center gap-4;
+    }
+    .tabs-icon {
+        @apply size-12 items-center justify-center;
+    }
+
+    .tabs-pill {
+        @apply size-12 items-center justify-center rounded-full bg-transparent;
+    }
+
+    .tabs-active {
+        @apply bg-accent;
+    }
 }
