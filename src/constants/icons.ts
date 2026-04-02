@@ -10,7 +10,7 @@ import github from "../../assets/icons/github.png";
 import medium from "../../assets/icons/medium.png";
 import notion from "../../assets/icons/notion.png";
 import openai from "../../assets/icons/openai.png";
-import wallet from "./../../assets/icons/wallet.png";
+import wallet from "../../assets/icons/wallet.png";
 import dropbox from "../../assets/icons/dropbox.png";
 import setting from "../../assets/icons/setting.png";
 import spotify from "../../assets/icons/spotify.png";
@@ -33,7 +33,7 @@ export const icons = {
     figma,
     spotify,
     github,
-    claude
+    claude,
 } as const;
 
 export type IconKey = keyof typeof icons;

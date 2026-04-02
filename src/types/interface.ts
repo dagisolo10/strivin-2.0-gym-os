@@ -2,10 +2,11 @@ export type Unit = "kg" | "lb" | "km" | "mi";
 export type ExerciseVariant = "Upper" | "Lower" | "Endurance";
 export type ExerciseType = "Push" | "Pull" | "Legs" | "Core" | "Cardio";
 export type Goal = "Hypertrophy" | "Strength" | "Endurance" | "Fat Loss";
-export type WorkoutSplit = "Push Pull Leg" | "Upper Lower" | "Full Body" | "Endurance" | string;
+export type WorkoutSplit = "Push Pull Leg" | "Upper Lower" | "Full Body" | "Endurance";
 
 export interface Exercise {
     name: string;
+    workoutDays: string[];
     unit: Unit;
 
     sets?: number;
@@ -31,7 +32,6 @@ interface WorkoutDay {
     id: string;
     dayName: string;
     exercises: Exercise[];
-    targetDuration: number;
 }
 
 export interface WorkoutPlan {

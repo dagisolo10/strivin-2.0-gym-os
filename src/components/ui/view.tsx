@@ -2,8 +2,8 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { styled } from "nativewind";
 import { Text, TextProps, View, ViewProps } from "react-native";
-import { ScrollView, GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
+import { ScrollView, GestureHandlerRootView } from "react-native-gesture-handler";
 
 const SafeAreaView = styled(RNSafeAreaView);
 
@@ -17,7 +17,7 @@ interface TypographyProps extends TextProps {
 
 export const Screen = ({ className, children, ...props }: ThemedViewProps) => (
     <SafeAreaView className="bg-dead-zone dark flex-1">
-        <GestureHandlerRootView>
+        <GestureHandlerRootView style={{ flex: 1 }}>
             <ScrollView className={cn("bg-background")} contentContainerStyle={{ flexGrow: 1 }} {...props}>
                 <Div className={cn("flex-1", className)}>{children}</Div>
             </ScrollView>

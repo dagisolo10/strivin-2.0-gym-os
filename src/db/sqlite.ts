@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
 import { ExerciseType, ExerciseVariant, Goal, Unit, WorkoutSplit } from "@/types/interface";
 
@@ -8,7 +8,7 @@ export const users = sqliteTable("users", {
     id: integer("id").primaryKey({ autoIncrement: true }),
     name: text("name").notNull(),
     profile: text("profile"),
-    createdAt: text("created_at").default(new Date().toISOString()),
+    createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const workoutPlans = sqliteTable("workout_plans", {
@@ -19,7 +19,7 @@ export const workoutPlans = sqliteTable("workout_plans", {
     workoutDaysPerWeek: integer("days_per_week").notNull(),
     split: text("split").$type<WorkoutSplit>().notNull(),
     goal: text("goal").$type<Goal>(),
-    createdAt: text("created_at").default(new Date().toISOString()),
+    createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const workoutDays = sqliteTable("workout_days", {
@@ -54,7 +54,9 @@ export const workoutSessions = sqliteTable("workout_sessions", {
     userId: integer("user_id")
         .references(() => users.id, { onDelete: "cascade" })
         .notNull(),
-    date: text("date").notNull().default(new Date().toISOString()),
+    date: text("date")
+        .notNull()
+        .default(sql`(CURRENT_TIMESTAMP)`),
     perfectDay: integer("perfect_day", { mode: "boolean" }).default(false),
 });
 
@@ -74,7 +76,9 @@ export const exerciseLogs = sqliteTable("exercise_logs", {
     distance: real("distance"),
 
     completed: integer("completed", { mode: "boolean" }).default(false),
-    date: text("date").notNull().default(new Date().toISOString()),
+    date: text("date")
+        .notNull()
+        .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 // --- Relations ---

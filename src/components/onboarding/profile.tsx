@@ -7,20 +7,23 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { Controller, useFormContext } from "react-hook-form";
 
-export default function Identity() {
+export default function Profile() {
     const { control } = useFormContext();
 
     const pickImage = async (onChange: (uri: string) => void) => {
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.5
-        });
-
-        if (!result.canceled) {
-            onChange(result.assets[0].uri);
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        try {
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: "images",
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.5,
+            });
+            if (!result.canceled) {
+                onChange(result.assets[0].uri);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }
+        } catch (error) {
+            console.error("Failed to pick image:", error);
         }
     };
     return (

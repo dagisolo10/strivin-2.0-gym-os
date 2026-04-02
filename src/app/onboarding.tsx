@@ -8,8 +8,8 @@ import Goals from "@/components/onboarding/goals";
 import React, { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Name from "@/components/onboarding/name-input";
+import Profile from "@/components/onboarding/profile";
 import Finish from "@/components/onboarding/finish-up";
-import Identity from "@/components/onboarding/profile";
 import { FormProvider, useForm } from "react-hook-form";
 import Exercises from "@/components/onboarding/exercises";
 import Frequency from "@/components/onboarding/frequency";
@@ -17,7 +17,7 @@ import { STEP_CONTENT, TOTAL_STEPS } from "@/constants/data";
 import { KeyboardAvoidingView, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useOnboardingStore } from "@/store/use-onboarding-store";
-import FloatingRocket from "@/components/onboarding/floating-rocket";
+import FloatingBarbell from "@/components/onboarding/floating-barbell";
 import { ScrollView, GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, { FadeInRight, FadeInUp, FadeOutLeft, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 
@@ -33,7 +33,7 @@ export default function Onboarding() {
 
     const display = STEP_CONTENT[step as keyof typeof STEP_CONTENT];
 
-    const prevStep = () => setStep((step) => Math.max(step - 1, -1));
+    const prevStep = () => setStep((step) => Math.max(step - 1, 0));
     const nextStep = async () => {
         const fieldsByStep: Record<number, any> = { 1: ["name"], 2: ["workoutDays", "split"], 3: ["exercises"], 4: ["goal"], 5: ["profile"] };
         const fieldsToValidate = fieldsByStep[step];
@@ -43,9 +43,13 @@ export default function Onboarding() {
         const currentValues = methods.getValues();
 
         if (step === TOTAL_STEPS) {
-            console.log("Saving to SQLite:", { ...values, profile });
-            await registerUser({ ...values, profile });
-            router.replace("/(tabs)/profile");
+            try {
+                console.log("Saving to SQLite:", { ...currentValues, profile });
+                await registerUser({ ...currentValues } as any);
+                router.replace("/(tabs)/profile");
+            } catch (error) {
+                console.error("Failed to save onboarding data:", error);
+            }
         } else {
             (Object.keys(currentValues) as (keyof typeof currentValues)[]).forEach((key) => updateField(key, currentValues[key] as any));
             setStep((s) => Math.min(s + 1, TOTAL_STEPS));
@@ -74,12 +78,12 @@ export default function Onboarding() {
 
                                 <Div className="flex-1 pb-6">
                                     <Animated.View key={`step-${step}`} entering={FadeInRight.duration(400)} exiting={FadeOutLeft.duration(400)}>
-                                        {step === 0 && <FloatingRocket style={bobbingStyle} />}
+                                        {step === 0 && <FloatingBarbell style={bobbingStyle} />}
                                         {step === 1 && <Name />}
                                         {step === 2 && <Frequency />}
                                         {step === 3 && <Exercises />}
                                         {step === 4 && <Goals />}
-                                        {step === 5 && <Identity />}
+                                        {step === 5 && <Profile />}
                                         {step === 6 && <Finish />}
                                     </Animated.View>
                                 </Div>

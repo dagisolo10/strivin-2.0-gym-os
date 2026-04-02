@@ -37,8 +37,8 @@ export const LOWER_BODY_TEMPLATE: Partial<Exercise>[] = [
 
 export const ENDURANCE_TEMPLATE: Partial<Exercise>[] = [
     { name: "Steady State Run", distance: 5.0, duration: 1800, unit: "km", type: "Cardio", variant: "Endurance" },
-    { name: "Cycling Intervals", distance: 100, duration: 2400, unit: "mi", type: "Cardio", variant: "Endurance" },
-    { name: "Rowing Machine", distance: 2000, duration: 600, unit: "mi", type: "Cardio", variant: "Endurance" },
+    { name: "Cycling Intervals", distance: 10, duration: 2400, unit: "km", type: "Cardio", variant: "Endurance" },
+    { name: "Rowing Machine", distance: 2, duration: 600, unit: "km", type: "Cardio", variant: "Endurance" },
 ];
 
 export const FULL_BODY_TEMPLATE: Partial<Exercise>[] = [

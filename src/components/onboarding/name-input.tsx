@@ -14,10 +14,10 @@ export default function Name() {
             <Controller
                 name="name"
                 control={control}
-                render={({ field: { onChange, value, onBlur }, fieldState: { error } }) => (
+                render={({ field: { onChange, value, onBlur }, fieldState: { error, isTouched } }) => (
                     <Div>
                         <Label className="text-xs font-bold tracking-widest text-zinc-500 uppercase">Identity</Label>
-                        <Div className={cn("relative w-full justify-center rounded-2xl border transition-all duration-200", true ? "border-blue-500 bg-zinc-950/80" : "border-zinc-800")}>
+                        <Div className={cn("relative w-full justify-center rounded-2xl border transition-all duration-200", isTouched ? "border-blue-500 bg-zinc-950/80" : "border-zinc-800")}>
                             <Input value={value} onBlur={onBlur} onChangeText={onChange} placeholder="Enter your name..." placeholderTextColor="#52525b" className="border-0 bg-transparent text-xl font-semibold text-white" />
                             {value.length > 0 && (
                                 <Button onPress={() => onChange("")} variant="ghost" size={"icon"} className="absolute right-4 size-10 items-center justify-center rounded-full">

@@ -50,7 +50,7 @@ export const exercises = pgTable("exercises", {
 export const workoutSessions = pgTable("workout_sessions", {
     id: serial("id").primaryKey(),
     date: timestamp("date").defaultNow().notNull(),
-    perfectDay: boolean("perfect_day").default(false),
+    perfectDay: boolean("perfect_day").default(false).notNull(),
 });
 
 export const exerciseLogs = pgTable("exercise_logs", {
@@ -68,7 +68,7 @@ export const exerciseLogs = pgTable("exercise_logs", {
     duration: integer("duration"),
     distance: real("distance"),
 
-    completed: boolean("completed").default(false),
+    completed: boolean("completed").default(false).notNull(),
     date: timestamp("date").defaultNow().notNull(),
 });
 

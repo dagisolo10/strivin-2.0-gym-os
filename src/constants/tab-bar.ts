@@ -4,7 +4,7 @@ import { BottomTabNavigationOptions } from "@react-navigation/bottom-tabs";
 const primaryColor = "#527bda";
 const tabBar = { height: 72, horizontalInset: 20, radius: 48, iconFrame: 48, itemPaddingVertical: 8 };
 
-export function ScreenOptions() {
+export function useTabScreenOptions() {
     const insets = useSafeAreaInsets();
 
     const tabBarOptions: BottomTabNavigationOptions = {
@@ -19,16 +19,16 @@ export function ScreenOptions() {
             backgroundColor: primaryColor,
             borderTopWidth: 0,
             elevation: 0,
-            overflow: "hidden"
+            overflow: "hidden",
         },
         tabBarItemStyle: {
-            paddingVertical: tabBar.height / 2 - tabBar.iconFrame / 1.6
+            paddingVertical: tabBar.height / 2 - tabBar.iconFrame / 1.6,
         },
         tabBarIconStyle: {
             width: tabBar.iconFrame,
             height: tabBar.iconFrame,
-            alignSelf: "center"
-        }
+            alignSelf: "center",
+        },
     };
     return tabBarOptions;
 }

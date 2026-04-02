@@ -1,4 +1,4 @@
-import * as schema from "./postgres";
+import * as schema from "./sqlite";
 
 import { openDatabaseSync } from "expo-sqlite";
 import { drizzle } from "drizzle-orm/expo-sqlite";

@@ -2,13 +2,14 @@ import { Button, Input } from "../ui/button";
 import { Div, P, Card, Row, Label } from "../ui/view";
 
 import { cn } from "@/lib/utils";
+import { DAY_ORDER } from "@/constants/data";
 import { getTemplate } from "@/constants/templates";
 import { Exercise, WorkoutSplit } from "@/types/interface";
 import { useOnboardingStore } from "@/store/use-onboarding-store";
 import { Control, Controller, FieldValues, useFieldArray, useFormContext } from "react-hook-form";
 
 export default function Exercises() {
-    const { split } = useOnboardingStore();
+    const { split, workoutDays } = useOnboardingStore();
     const { control } = useFormContext();
     const { fields: exercises, append: appendEx, remove: removeEx } = useFieldArray({ control, name: "exercises" });
 
@@ -23,14 +24,14 @@ export default function Exercises() {
         const isEndurance = split === "Endurance";
         return {
             name: "",
-            type: isEndurance ? "Legs" : "Push",
+            type: isEndurance ? "Cardio" : "Push",
             variant: isEndurance ? "Endurance" : "Upper",
             unit: isEndurance ? "km" : "kg",
-            sets: isEndurance ? undefined : 3,
-            reps: isEndurance ? undefined : 12,
-            weight: isEndurance ? undefined : 10,
-            distance: isEndurance ? 5 : undefined,
-            duration: isEndurance ? 30 : undefined,
+            sets: isEndurance ? undefined : 0,
+            reps: isEndurance ? undefined : 0,
+            weight: isEndurance ? undefined : 0,
+            distance: isEndurance ? 0 : undefined,
+            duration: isEndurance ? 0 : undefined,
         };
     };
 
@@ -49,12 +50,52 @@ export default function Exercises() {
                         <Duration type={exercise.type} control={control} index={index} onChangeText={handleNumberChange} />
                         <WeightUnit type={exercise.type} control={control} index={index} onChangeText={handleNumberChange} />
 
+                        <DayAssignment control={control} index={index} workoutDays={workoutDays} />
                         <Type control={control} index={index} />
                         <Variant control={control} index={index} />
                     </Card>
                 ))}
 
             <AddExercise length={exercises.length} onAppend={getCustomDefault} action={appendEx} split={split} />
+        </Div>
+    );
+}
+
+function DayAssignment({ control, index, workoutDays }: All & { workoutDays: string[] }) {
+    return (
+        <Div>
+            <Label>Perform on:</Label>
+            <Row className="gap-2">
+                <Controller
+                    name={`exercises.${index}.workoutDays`}
+                    control={control}
+                    defaultValue={workoutDays}
+                    render={({ field: { value = [], onChange }, fieldState: { error } }) => (
+                        <Div className="flex-1">
+                            <Row className="flex-wrap gap-2">
+                                {workoutDays
+                                    .sort((a, b) => DAY_ORDER[a] - DAY_ORDER[b])
+                                    .map((day) => {
+                                        const isSelected = value.includes(day);
+                                        return (
+                                            <Button
+                                                key={day}
+                                                variant={isSelected ? "primary" : "outline"}
+                                                className={cn(workoutDays.length > 3 ? "w-30" : "flex-1")}
+                                                onPress={() => {
+                                                    const next = isSelected ? value.filter((d: string) => d !== day) : [...value, day];
+                                                    onChange(next);
+                                                }}>
+                                                <P className={isSelected ? "text-white" : "text-zinc-400"}>{day.substring(0, 3)}</P>
+                                            </Button>
+                                        );
+                                    })}
+                            </Row>
+                            {error && <Label className="text-destructive">{error.message}</Label>}
+                        </Div>
+                    )}
+                />
+            </Row>
         </Div>
     );
 }
@@ -300,16 +341,16 @@ interface ChangeProp extends All {
 }
 
 interface AddCustomProp {
-    onAddCustom: (split: string) => Partial<Exercise>;
-    onAddTemplate: (split: string) => Partial<Exercise>[];
+    onAddCustom: (split: WorkoutSplit) => Partial<Exercise>;
+    onAddTemplate: (split: WorkoutSplit) => Partial<Exercise>[];
     action: (value: Partial<Exercise> | Partial<Exercise>[]) => void;
-    split: string;
+    split: WorkoutSplit;
     length: number;
 }
 
 interface AddExProp {
     length: number;
     action: (value: Partial<Exercise>) => void;
-    onAppend: (split: string) => Partial<Exercise>;
-    split: string;
+    onAppend: (split: WorkoutSplit) => Partial<Exercise>;
+    split: WorkoutSplit;
 }
