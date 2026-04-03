@@ -1,8 +1,5 @@
 import { relations } from "drizzle-orm";
-import { ExerciseType, ExerciseVariant, Goal, Unit, WorkoutSplit } from "@/types/interface";
 import { boolean, pgTable, real, serial, text, integer, timestamp } from "drizzle-orm/pg-core";
-
-// --- Tables ---
 
 export const users = pgTable("users", {
     id: serial("id").primaryKey(),
@@ -105,9 +102,9 @@ export const exerciseLogsRelations = relations(exerciseLogs, ({ one }) => ({
 
 // --- Export Types ---
 
-export type User = typeof users.$inferSelect;
-export type WorkoutPlan = typeof workoutPlans.$inferSelect;
-export type WorkoutDay = typeof workoutDays.$inferSelect;
-export type Exercise = typeof exercises.$inferSelect;
-export type WorkoutSession = typeof workoutSessions.$inferSelect;
-export type ExerciseLog = typeof exerciseLogs.$inferSelect;
+// export type User = typeof users.$inferSelect;
+// export type WorkoutPlan = typeof workoutPlans.$inferSelect;
+// export type WorkoutDay = typeof workoutDays.$inferSelect;
+// export type Exercise = typeof exercises.$inferSelect;
+// export type WorkoutSession = typeof workoutSessions.$inferSelect;
+// export type ExerciseLog = typeof exerciseLogs.$inferSelect;

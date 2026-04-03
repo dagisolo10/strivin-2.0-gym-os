@@ -1,8 +1,10 @@
+import { P } from "./view";
+
 import { cn } from "@/lib/utils";
 import * as Haptics from "expo-haptics";
 import { Link, LinkProps } from "expo-router";
 import { VariantProps, cva } from "class-variance-authority";
-import { PressableProps, GestureResponderEvent, Pressable, Text, TextInput, TextInputProps } from "react-native";
+import { PressableProps, GestureResponderEvent, Pressable, TextInput, TextInputProps } from "react-native";
 
 interface ButtonProps extends PressableProps, VariantProps<typeof buttonVariants> {
     children: React.ReactNode;
@@ -19,42 +21,44 @@ const buttonVariants = cva("h-12 flex-row items-center justify-center rounded-xl
             destructive: "bg-destructive",
             outline: "border border-border bg-transparent",
             ghost: "bg-transparent",
-            link: "bg-transparent px-0 h-auto"
+            link: "bg-transparent px-0 h-auto",
         },
 
         size: {
             default: "h-12 px-6",
             sm: "h-9 px-3 rounded-lg",
             lg: "h-14 px-8 rounded-2xl",
-            icon: "size-12 px-0"
-        }
+            icon: "size-12 px-0",
+        },
     },
 
     defaultVariants: {
         variant: "primary",
-        size: "default"
-    }
+        size: "default",
+    },
 });
 
 const textVariants = {
-    primary: "text-background dark:text-foreground",
+    primary: "text-background",
     success: "text-foreground",
     secondary: "text-foreground",
     destructive: "text-foreground",
     outline: "text-foreground",
     ghost: "text-foreground",
-    link: "text-primary underline"
+    link: "text-primary underline",
 };
 
-export const Button = ({ variant = "primary", size = "default", children, className, textClassName, onPress, ...props }: ButtonProps) => {
+export const Button = ({ variant = "primary", size = "default", children, className, textClassName, onPress, component = false, ...props }: ButtonProps & { component?: boolean }) => {
     const handlePress = (e: GestureResponderEvent) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         onPress?.(e);
     };
 
+    const renderContent = () => (!component ? <P className={cn("font-semibold", variant && textVariants[variant], textClassName)}>{children}</P> : children);
+
     return (
-        <Pressable onPress={handlePress} className={cn(buttonVariants({ variant, size, className }))} {...props}>
-            <Text className={cn("font-black", variant && textVariants[variant], textClassName)}>{children}</Text>
+        <Pressable onPress={handlePress} className={cn(buttonVariants({ className, variant, size }))} {...props}>
+            {renderContent}
         </Pressable>
     );
 };
@@ -62,7 +66,7 @@ export const Button = ({ variant = "primary", size = "default", children, classN
 export const NavLink = ({ children, href, className, textClassName }: { children: React.ReactNode; href: LinkProps["href"]; className?: string; textClassName?: string }) => (
     <Link href={href} asChild>
         <Pressable className={cn("active:opacity-70", className)}>
-            <Text className={cn("text-accent font-medium", textClassName)}>{children}</Text>
+            <P className={cn("text-accent font-sans-medium", textClassName)}>{children}</P>
         </Pressable>
     </Link>
 );

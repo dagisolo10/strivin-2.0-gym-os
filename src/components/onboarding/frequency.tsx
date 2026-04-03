@@ -34,7 +34,7 @@ export default function Frequency() {
                             <Div className="row">
                                 <Button
                                     variant={custom ? "primary" : "outline"}
-                                    className="w-1/3"
+                                    className="flex-1"
                                     onPress={() => {
                                         onChange("");
                                         setCustom(true);

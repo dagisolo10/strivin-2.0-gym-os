@@ -8,7 +8,8 @@ export const STEP_CONTENT = {
     6: { title: "You're All Set.", subtitle: "Your personalized plan is ready. Let's get to work!" },
 };
 
-export const TOTAL_STEPS = Object.keys(STEP_CONTENT).length;
+export const TOTAL_STEPS = 6;
 
-export const weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-export const DAY_ORDER: Record<string, number> = { Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4, Saturday: 5, Sunday: 6 };
+export const weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
+
+export const DAY_ORDER: Record<Weekday, number> = { Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4, Saturday: 5, Sunday: 6 };

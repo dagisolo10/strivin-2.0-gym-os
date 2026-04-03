@@ -1,10 +1,10 @@
 import { create } from "zustand";
-import { Exercise, Goal, WorkoutSplit } from "@/types/interface";
+import { Exercise } from "@/types/interface";
 
 interface OnboardingState {
     name: string;
     split: WorkoutSplit;
-    workoutDays: string[];
+    workoutDays: Weekday[];
     exercises: Exercise[];
     goal: Goal;
     profile: string | null;

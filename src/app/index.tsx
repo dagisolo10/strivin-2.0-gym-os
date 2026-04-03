@@ -15,7 +15,7 @@ export default function Index() {
 
     useEffect(() => {
         if (updatedAt) {
-            if (user) router.replace("/(tabs)/profile");
+            if (user) router.replace("/(tabs)/home");
             else router.replace("/onboarding" as any);
         }
     }, [user, updatedAt, router]);

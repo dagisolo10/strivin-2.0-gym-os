@@ -1,8 +1,5 @@
 import { relations, sql } from "drizzle-orm";
 import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
-import { ExerciseType, ExerciseVariant, Goal, Unit, WorkoutSplit } from "@/types/interface";
-
-// --- Tables ---
 
 export const users = sqliteTable("users", {
     id: integer("id").primaryKey({ autoIncrement: true }),
@@ -92,9 +89,9 @@ export const exerciseLogsRelations = relations(exerciseLogs, ({ one }) => ({ ses
 
 // --- Export Types ---
 
-export type User = typeof users.$inferSelect;
-export type WorkoutPlan = typeof workoutPlans.$inferSelect;
-export type WorkoutDay = typeof workoutDays.$inferSelect;
-export type Exercise = typeof exercises.$inferSelect;
-export type WorkoutSession = typeof workoutSessions.$inferSelect;
-export type ExerciseLog = typeof exerciseLogs.$inferSelect;
+// export type User = typeof users.$inferSelect;
+// export type WorkoutPlan = typeof workoutPlans.$inferSelect;
+// export type WorkoutDay = typeof workoutDays.$inferSelect;
+// export type Exercise = typeof exercises.$inferSelect;
+// export type WorkoutSession = typeof workoutSessions.$inferSelect;
+// export type ExerciseLog = typeof exerciseLogs.$inferSelect;

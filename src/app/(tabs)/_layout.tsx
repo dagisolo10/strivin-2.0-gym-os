@@ -9,7 +9,9 @@ import { useTabScreenOptions } from "@/constants/tab-bar";
 export default function TabLayout() {
     return (
         <Tabs screenOptions={useTabScreenOptions()}>
-            <Tabs.Screen name="profile" options={{ title: "Profile", tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon={icons.wallet} /> }} />
+            <Tabs.Screen name="home" options={{ title: "Home", tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon={icons.home} /> }} />
+            <Tabs.Screen name="add" options={{ title: "Add", tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon={icons.plus} /> }} />
+            <Tabs.Screen name="toast" options={{ title: "Toast", tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon={icons.activity} /> }} />
             <Tabs.Screen name="settings" options={{ title: "Settings", tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon={icons.setting} /> }} />
         </Tabs>
     );
