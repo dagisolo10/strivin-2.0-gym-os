@@ -1,21 +1,29 @@
 import { z } from "zod";
 
-const exerciseSchema = z.object({
-    name: z.string().min(1, "Exercise name required"),
-    workoutDays: z.array(z.string()).min(1, "Pick at least one day"),
-    unit: z.string().min(1, "Must choose unit"),
+export const exerciseSchema = z
+    .object({
+        name: z.string().min(1, "Exercise name required"),
+        workoutDays: z.array(z.string()).min(1, "Pick at least one day"),
+        unit: z.string().min(1, "Must choose unit"),
+        type: z.string().min(1, "Exercise type required"),
+        variant: z.string().min(1, "Exercise variant required"),
 
-    sets: z.number().min(1, "Must have at least 1 set").optional(),
-    reps: z.number().min(1, "Must have at least 1 rep").optional(),
-
-    distance: z.number().min(1, "Must have at least 1 distance").optional(),
-    duration: z.number().min(1, "Must have at least 1 duration").optional(),
-
-    weight: z.number().min(0.1, "Weight must be at least 0.1").optional(),
-
-    type: z.string().min(1, "Exercise type required"),
-    variant: z.string().min(1, "Exercise variant required"),
-});
+        sets: z.number().optional(),
+        reps: z.number().optional(),
+        weight: z.number().optional(),
+        distance: z.number().optional(),
+        duration: z.number().optional(),
+    })
+    .superRefine((data, ctx) => {
+        if (data.type === "Cardio") {
+            if (!data.duration || data.duration < 1) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Duration is required for Cardio", path: ["duration"] });
+            if (!data.distance || data.distance <= 0) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Distance is required for Cardio", path: ["distance"] });
+        } else {
+            if (!data.sets || data.sets < 1) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Sets are required for strength training", path: ["sets"] });
+            if (!data.reps || data.reps < 1) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Reps are required", path: ["reps"] });
+            if (!data.weight || data.weight < 1) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Weight are required", path: ["weight"] });
+        }
+    });
 
 export const onboardingSchema = z.object({
     name: z.string().trim().min(2, "Name is too short"),

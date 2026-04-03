@@ -3,8 +3,8 @@ import { Div, P, Card, Row, Label } from "../ui/view";
 
 import { cn } from "@/lib/utils";
 import { DAY_ORDER } from "@/constants/data";
+import { Exercise } from "@/types/interface";
 import { getTemplate } from "@/constants/templates";
-import { Exercise, WorkoutSplit } from "@/types/interface";
 import { useOnboardingStore } from "@/store/use-onboarding-store";
 import { Control, Controller, FieldValues, useFieldArray, useFormContext } from "react-hook-form";
 
@@ -61,7 +61,7 @@ export default function Exercises() {
     );
 }
 
-function DayAssignment({ control, index, workoutDays }: All & { workoutDays: string[] }) {
+function DayAssignment({ control, index, workoutDays }: All & { workoutDays: Weekday[] }) {
     return (
         <Div>
             <Label>Perform on:</Label>

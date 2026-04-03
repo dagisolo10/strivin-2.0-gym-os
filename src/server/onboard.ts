@@ -1,6 +1,6 @@
 import { db } from "@/db/client";
 import * as schema from "@/db/sqlite";
-import { Goal, WorkoutSplit, Exercise } from "@/types/interface";
+import { Exercise } from "@/types/interface";
 
 interface OnboardingState {
     name: string;

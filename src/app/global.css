@@ -6,16 +6,16 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-    --background: #ffffff;
-    --foreground: #1a1a1a;
-    --dead-zone: #12110f;
+    --dead-zone: #000000;
+    --background: #fff9e3;
+    --foreground: #081126;
 
     --primary: #527bda;
     --accent: #ea7a53;
     --muted: #f6eecf;
     --muted-foreground: #666666;
-    --border: #e5e5e5;
 
+    --border: hsl(none 0% 0% / 0.1);
     --success: #16a34a;
     --destructive: #dc2626;
 }
@@ -27,6 +27,7 @@
 
     --primary: #527bda;
     --accent: #f97316;
+
     --muted-foreground: #b3b3b3;
     --muted: #1e293b;
     --border: #252b32;
@@ -36,14 +37,11 @@
     --color-background: var(--background);
     --color-foreground: var(--foreground);
     --color-dead-zone: var(--dead-zone);
-
     --color-primary: var(--primary);
     --color-accent: var(--accent);
     --color-muted-foreground: var(--muted-foreground);
-
     --color-muted: var(--muted);
     --color-border: var(--border);
-
     --color-success: var(--success);
     --color-destructive: var(--destructive);
 
@@ -56,11 +54,18 @@
     --spacing-8: 32px;
     --spacing-10: 40px;
     --spacing-12: 48px;
+
+    --font-sans: sans-regular;
+    --font-light: sans-light;
+    --font-medium: sans-medium;
+    --font-semibold: sans-semibold;
+    --font-bold: sans-bold;
+    --font-extrabold: sans-extrabold;
 }
 
 @layer components {
     .row {
-        @apply flex-row items-center gap-4;
+        @apply flex-row items-center;
     }
     .tabs-icon {
         @apply size-12 items-center justify-center;
