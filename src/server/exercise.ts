@@ -1,10 +1,11 @@
 import * as schema from "@/db/sqlite";
-import { Exercise } from "@/types/interface";
 import { ExpoSQLiteDatabase } from "drizzle-orm/expo-sqlite";
+
+type NewExercise = Omit<typeof schema.exercises.$inferInsert, "workoutDayId">;
 
 interface Data {
     planId: number;
-    exercise: Exercise;
+    exercise: NewExercise;
     workoutDays: Weekday[];
 }
 
@@ -13,21 +14,23 @@ export async function addExercise(data: Data, drizzleDB: ExpoSQLiteDatabase<type
         const plan = await drizzleDB.query.workoutPlans.findFirst({ where: (workoutPlans, { eq }) => eq(workoutPlans.id, data.planId) });
         if (!plan) return { success: false, error: "Plan not found" };
 
-        for (const day of data.workoutDays) {
-            const workoutDay = await drizzleDB.query.workoutDays.findFirst({
-                where: (workoutDays, { eq, and }) => and(eq(workoutDays.planId, plan.id), eq(workoutDays.dayName, day)),
-            });
-            let workoutDayId;
+        await drizzleDB.transaction(async (tx) => {
+            for (const day of data.workoutDays) {
+                const workoutDay = await tx.query.workoutDays.findFirst({
+                    where: (workoutDays, { eq, and }) => and(eq(workoutDays.planId, plan.id), eq(workoutDays.dayName, day)),
+                });
+                let workoutDayId;
 
-            if (!workoutDay) {
-                const [newDay] = await drizzleDB.insert(schema.workoutDays).values({ dayName: day, planId: plan.id }).returning({ id: schema.workoutDays.id });
-                workoutDayId = newDay.id;
-            } else {
-                workoutDayId = workoutDay.id;
+                if (!workoutDay) {
+                    const [newDay] = await tx.insert(schema.workoutDays).values({ dayName: day, planId: plan.id }).returning({ id: schema.workoutDays.id });
+                    workoutDayId = newDay.id;
+                } else {
+                    workoutDayId = workoutDay.id;
+                }
+
+                await tx.insert(schema.exercises).values({ ...data.exercise, workoutDayId });
             }
-
-            await drizzleDB.insert(schema.exercises).values({ ...data.exercise, workoutDayId });
-        }
+        });
 
         return { success: true };
     } catch (error) {

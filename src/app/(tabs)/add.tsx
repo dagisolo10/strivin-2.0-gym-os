@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { cn } from "@/lib/utils";
 import * as schema from "@/db/sqlite";
-import React, { useMemo } from "react";
 import { useRouter } from "expo-router";
 import { exerciseSchema } from "@/db/zod";
 import { toast } from "react-native-sonner";
@@ -11,6 +10,8 @@ import { useSQLiteContext } from "expo-sqlite";
 import { addExercise } from "@/server/exercise";
 import { ActivityIndicator } from "react-native";
 import { AlertCircle } from "lucide-react-native";
+import React, { useEffect, useMemo } from "react";
+import { toOptionalNumber } from "@/lib/functions";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button, Input } from "@/components/ui/button";
 import { ScrollView } from "react-native-gesture-handler";
@@ -19,23 +20,62 @@ import { useForm, Controller, FieldErrors, FieldValues } from "react-hook-form";
 import { Div, H1, P, Label, Badge, H2, Screen, Card, Row } from "@/components/ui/view";
 
 export default function AddExerciseScreen() {
-    const db = useSQLiteContext();
     const router = useRouter();
+
+    const db = useSQLiteContext();
     const drizzleDB = useMemo(() => drizzle(db, { schema }), [db]);
-    const { control, handleSubmit, watch } = useForm({ resolver: zodResolver(exerciseSchema), defaultValues: { name: "", unit: "", type: "", variant: "", workoutDays: [] } });
+
     const { data: user } = useLiveQuery(drizzleDB.query.users.findFirst({ with: { plans: { with: { days: { with: { exercises: true } } } } } }));
 
-    const plans = user?.plans;
-
-    if (!plans || plans?.length === 0) return null;
-
-    if (!user) return <ActivityIndicator size={"large"} />;
-
-    const mainPlanId = plans[0].id;
+    const { control, handleSubmit, watch, resetField, setValue, getValues } = useForm({
+        resolver: zodResolver(exerciseSchema),
+        defaultValues: {
+            name: "",
+            unit: "",
+            type: "",
+            variant: "",
+            workoutDays: [],
+        },
+    });
 
     const selectedType = watch("type");
     const selectedUnit = watch("unit");
     const isCardio = selectedType === "Cardio";
+
+    useEffect(() => {
+        if (!selectedType) return;
+
+        if (isCardio) {
+            resetField("sets");
+            resetField("reps");
+            resetField("weight");
+            if (!["km", "mi"].includes(String(getValues("unit") ?? ""))) setValue("unit", "km");
+        } else {
+            resetField("duration");
+            resetField("distance");
+            if (!["kg", "lb"].includes(String(getValues("unit") ?? ""))) setValue("unit", "kg");
+        }
+    }, [getValues, isCardio, resetField, selectedType, setValue]);
+
+    const plans = user?.plans;
+
+    if (!user) {
+        return (
+            <Screen className="items-center justify-center" scrollable={false}>
+                <ActivityIndicator size="large" />
+            </Screen>
+        );
+    }
+
+    if (!plans || plans.length === 0) {
+        return (
+            <Screen className="items-center justify-center px-6" scrollable={false}>
+                <P className="text-muted-foreground text-center">Create a workout plan before adding exercises.</P>
+            </Screen>
+        );
+    }
+
+    const planId = plans[0].id;
 
     const onInvalid = (errors: FieldErrors<FieldValues>) => {
         const errorEntries = Object.entries(errors).filter(([_, error]) => error?.message);
@@ -46,20 +86,24 @@ export default function AddExerciseScreen() {
         const { workoutDays, ...exercises } = data;
 
         const payload = {
-            planId: mainPlanId,
+            planId,
             exercise: exercises as Exercise,
             workoutDays: workoutDays as Weekday[],
         };
 
         try {
-            await toast.promise(addExercise(payload, drizzleDB), {
+            const request = addExercise(payload, drizzleDB).then((result) => {
+                if (!result.success) throw new Error(String(result.error));
+                return result;
+            });
+
+            toast.promise(request, {
                 loading: "Adding Exercise...",
-                success(data) {
-                    if (!data?.success) throw new Error(String(data?.error));
-                    return "Success";
-                },
+                success: "Success",
                 error: "Failed to add exercise",
             });
+
+            await request;
 
             router.replace("/(tabs)/home");
         } catch (e) {
@@ -224,7 +268,7 @@ function Duration({ control, isCardio }: { control: any; isCardio: boolean }) {
                     render={({ field, fieldState: { error } }) => (
                         <Div className="flex-1">
                             <Label className="text-background">Duration (min)</Label>
-                            <Input className={cn(error && "border-destructive border")} keyboardType="numeric" onChangeText={(t) => field.onChange(Number(t))} />
+                            <Input className={cn(error && "border-destructive border")} keyboardType="numeric" onChangeText={(t) => field.onChange(toOptionalNumber(t))} />
                         </Div>
                     )}
                 />
@@ -243,7 +287,7 @@ function SetsAndReps({ control, isCardio }: { control: any; isCardio: boolean })
                         render={({ field, fieldState: { error } }) => (
                             <Div className="flex-1">
                                 <Label className="text-background">Sets</Label>
-                                <Input className={cn(error && "border-destructive border")} keyboardType="numeric" onChangeText={(t) => field.onChange(Number(t))} />
+                                <Input className={cn(error && "border-destructive border")} keyboardType="numeric" onChangeText={(t) => field.onChange(toOptionalNumber(t))} />
                             </Div>
                         )}
                     />
@@ -253,7 +297,7 @@ function SetsAndReps({ control, isCardio }: { control: any; isCardio: boolean })
                         render={({ field, fieldState: { error } }) => (
                             <Div className="flex-1">
                                 <Label className="text-background">Reps</Label>
-                                <Input className={cn(error && "border-destructive border")} keyboardType="numeric" onChangeText={(t) => field.onChange(Number(t))} />
+                                <Input className={cn(error && "border-destructive border")} keyboardType="numeric" onChangeText={(t) => field.onChange(toOptionalNumber(t))} />
                             </Div>
                         )}
                     />
@@ -270,9 +314,9 @@ const UnitField = ({ control, isCardio, unit }: { control: any; isCardio: boolea
             render={({ field, fieldState: { error } }) => (
                 <Div className="flex-1">
                     <Label className="text-background">
-                        {isCardio ? "Distance" : "Weight"} ({"unit"})
+                        {isCardio ? "Distance" : "Weight"} ({unit || (isCardio ? "km" : "kg")})
                     </Label>
-                    <Input className={cn(error && "border-destructive border")} keyboardType="numeric" onChangeText={(t) => field.onChange(Number(t))} />
+                    <Input className={cn(error && "border-destructive border")} keyboardType="numeric" onChangeText={(t) => field.onChange(toOptionalNumber(t))} />
                 </Div>
             )}
         />

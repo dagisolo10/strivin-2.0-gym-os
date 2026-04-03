@@ -13,7 +13,7 @@ export default function HomeScreen() {
     const today = new Date().toLocaleDateString("en-US", { weekday: "long" }) as Weekday;
     const [exerciseDay, setExerciseDay] = useState<Weekday>(today);
 
-    const exercises = (user.plans[0].days.find((day) => day.dayName === exerciseDay)?.exercises || []) as DummyExercise[];
+    const exercises = (user.plans?.[0]?.days.find((day) => day.dayName === exerciseDay)?.exercises || []) as DummyExercise[];
 
     const [expandedExerciseId, setExpandedExerciseId] = useState<number | null>(null);
 
@@ -69,7 +69,7 @@ export default function HomeScreen() {
                         </Div>
 
                         <Row className="mb-2">
-                            <H3 className="font-bold">Today&apos;s Routine</H3>
+                            <H3 className="font-bold">{exerciseDay === today ? "Today's Routine" : `${exerciseDay}'s Routine`}</H3>
                             <P className="text-muted-foreground font-bold">{exerciseDay}</P>
                         </Row>
                     </Div>
@@ -90,7 +90,7 @@ function ExerciseCard({ exercise, onPress, expandedId }: { exercise: DummyExerci
     const [weight, setWeight] = useState(exercise.weight?.toString() || "");
     const [reps, setReps] = useState(exercise.reps?.toString() || "");
     const [currentSet, setCurrentSet] = useState(0);
-    const completed = currentSet >= exercise.sets;
+    const completed = currentSet >= (exercise.sets || 0);
 
     return (
         <Card className={cn("gap-0 rounded-2xl p-0", isExpanded && "border-primary/30 shadow-md")}>
@@ -109,7 +109,7 @@ function ExerciseCard({ exercise, onPress, expandedId }: { exercise: DummyExerci
                         </Div>
                     </Div>
 
-                    {expandedId && expandedId === exercise.id ? <ChevronUp size={20} color="#666" /> : <ChevronDown size={20} color="#666" />}
+                    {isExpanded ? <ChevronUp size={20} color="#666" /> : <ChevronDown size={20} color="#666" />}
                 </Row>
             </Button>
 
@@ -136,7 +136,7 @@ function ExerciseCard({ exercise, onPress, expandedId }: { exercise: DummyExerci
                         </Row>
                     </Div>
 
-                    <Button variant={completed ? "success" : "primary"} textClassName="text-background" onPress={() => currentSet < exercise.sets && setCurrentSet((prev) => prev + 1)}>
+                    <Button variant={completed ? "success" : "primary"} textClassName="text-background" onPress={() => !completed && setCurrentSet((prev) => prev + 1)}>
                         {completed ? "Exercise Finished" : `Log Set ${currentSet + 1}`}
                     </Button>
                 </Div>

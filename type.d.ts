@@ -1,3 +1,4 @@
+import { weekdays } from "@/constants/data";
 import type { ImageSourcePropType } from "react-native";
 
 declare global {

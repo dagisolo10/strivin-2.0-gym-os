@@ -24,7 +24,9 @@ export const Screen = ({ className, children, scrollable = true, ...props }: The
                     <Div className={cn("flex-1", className)}>{children}</Div>
                 </ScrollView>
             ) : (
-                <Div className={cn("bg-background flex-1", className)}>{children}</Div>
+                <Div className={cn("bg-background flex-1", className)} {...props}>
+                    {children}
+                </Div>
             )}
         </KeyboardAvoidingView>
     </SafeAreaView>

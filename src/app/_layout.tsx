@@ -25,7 +25,7 @@ export default function RootLayout() {
     const { success, error } = useMigrations(db, migrations);
     useDrizzleStudio(success ? expoDB : null);
 
-    const [fontsLoaded] = useFonts({
+    const [fontsLoaded, fontError] = useFonts({
         "sans-regular": require("../../assets/fonts/PlusJakartaSans-Regular.ttf"),
         "sans-bold": require("../../assets/fonts/PlusJakartaSans-Bold.ttf"),
         "sans-medium": require("../../assets/fonts/PlusJakartaSans-Medium.ttf"),
@@ -35,8 +35,16 @@ export default function RootLayout() {
     });
 
     useEffect(() => {
-        if (fontsLoaded) SplashScreen.hideAsync();
-    }, [fontsLoaded]);
+        if (fontsLoaded || fontError) SplashScreen.hideAsync();
+    }, [fontError, fontsLoaded]);
+
+    if (fontError) {
+        return (
+            <Div className="flex-1 items-center justify-center bg-black">
+                <P className="text-center text-red-500">Font Error: {fontError.message}</P>
+            </Div>
+        );
+    }
 
     if (!fontsLoaded) return null;
 
