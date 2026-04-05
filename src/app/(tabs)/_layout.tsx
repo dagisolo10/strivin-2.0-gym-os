@@ -7,11 +7,13 @@ import { Div } from "@/components/ui/view";
 import { useTabScreenOptions } from "@/constants/tab-bar";
 
 export default function TabLayout() {
+    const options = useTabScreenOptions();
+
     return (
-        <Tabs screenOptions={useTabScreenOptions()}>
+        <Tabs screenOptions={options}>
             <Tabs.Screen name="home" options={{ title: "Home", tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon={icons.home} /> }} />
             <Tabs.Screen name="add" options={{ title: "Add", tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon={icons.plus} /> }} />
-            <Tabs.Screen name="toast" options={{ title: "Toast", tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon={icons.activity} /> }} />
+            <Tabs.Screen name="progress" options={{ title: "Progress", tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon={icons.activity} /> }} />
             <Tabs.Screen name="settings" options={{ title: "Settings", tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon={icons.setting} /> }} />
         </Tabs>
     );

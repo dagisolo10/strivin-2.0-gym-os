@@ -1,79 +1,89 @@
-import { db } from "@/db/client";
-import * as schema from "@/db/sqlite";
-import { Exercise } from "@/types/interface";
+import { useStaticStore } from "@/store/use-static-store";
+
+interface ExerciseInput {
+    name: string;
+    workoutDays: Weekday[];
+    unit: Unit;
+    sets?: number;
+    reps?: number;
+    weight?: number;
+    distance?: number;
+    duration?: number;
+    type: ExerciseType;
+    variant: ExerciseVariant;
+}
 
 interface OnboardingState {
     name: string;
     split: WorkoutSplit;
-    workoutDays: string[];
-    exercises: Exercise[];
-    goal: Goal;
+    workoutDays: Weekday[];
+    exercises?: ExerciseInput[];
+    goal?: Goal | null;
+    sessionLength?: number;
+    fitnessLevel?: FitnessLevel | null;
     profile: string | null;
 }
 
 export async function registerUser(data: OnboardingState) {
-    console.log("FINAL DATA SUBMISSION:", JSON.stringify(data, null, 2));
+    const store = useStaticStore.getState();
 
-    return await db.transaction(async (tx) => {
-        const [user] = await tx
-            .insert(schema.users)
-            .values({
-                name: data.name,
-                profile: data.profile,
-            })
-            .returning({ id: schema.users.id });
+    const user = store.createUser(data.name, data.profile);
 
-        const [plan] = await tx
-            .insert(schema.workoutPlans)
-            .values({
-                userId: user.id,
-                split: data.split,
-                workoutDaysPerWeek: data.workoutDays.length,
-                goal: data.goal,
-            })
-            .returning({ id: schema.workoutPlans.id });
-
-        const dayRecords = await tx
-            .insert(schema.workoutDays)
-            .values(
-                data.workoutDays.map((day) => ({
-                    planId: plan.id,
-                    dayName: day,
-                })),
-            )
-            .returning({ id: schema.workoutDays.id, dayName: schema.workoutDays.dayName });
-
-        if (data.exercises && data.exercises.length > 0 && dayRecords.length > 0) {
-            const exerciseData = data.exercises
-                .flatMap((exercise) => {
-                    const selectedDays = exercise.workoutDays || [];
-                    return selectedDays.map((selectedDayName) => {
-                        const dayRecord = dayRecords.find((day) => day.dayName === selectedDayName);
-
-                        if (!dayRecord) {
-                            console.warn(`No record found for day: ${selectedDayName}`);
-                            return null;
-                        }
-
-                        return {
-                            workoutDayId: dayRecord.id,
-                            name: exercise.name,
-                            sets: exercise.sets,
-                            reps: exercise.reps,
-                            weight: exercise.weight,
-                            distance: exercise.distance,
-                            duration: exercise.duration,
-                            unit: exercise.unit,
-                            type: exercise.type,
-                            variant: exercise.variant,
-                        };
-                    });
-                })
-                .filter((ex): ex is NonNullable<typeof ex> => ex !== null);
-
-            if (exerciseData.length > 0) await tx.insert(schema.exercises).values(exerciseData);
-            else console.error("ExerciseData was empty after flatMap. Check if workoutDays matches dayRecords.");
-        }
-        return { success: true, userId: user.id };
+    const plan = store.createPlan({
+        split: data.split,
+        workoutDaysPerWeek: data.workoutDays.length,
+        goal: data.goal ?? null,
+        fitnessLevel: data.fitnessLevel ?? null,
     });
+
+    // Create workout days
+    const dayRecords = data.workoutDays.map((day) => store.createWorkoutDay({ userId: user.id, planId: plan.id, dayName: day }));
+
+    // Create exercises
+    if (data.exercises && data.exercises.length > 0 && dayRecords.length > 0) {
+        const exerciseData = data.exercises
+            .flatMap((exercise) => {
+                const selectedDays = exercise.workoutDays;
+
+                return selectedDays.map((selectedDayName) => {
+                    const dayRecord = dayRecords.find((day) => day.dayName === selectedDayName);
+
+                    if (!dayRecord) {
+                        console.warn(`No record found for day: ${selectedDayName}`);
+                        return null;
+                    }
+
+                    return {
+                        userId: user.id,
+                        planId: plan.id,
+                        workoutDayId: dayRecord.id,
+                        name: exercise.name,
+                        sets: exercise.sets ?? null,
+                        reps: exercise.reps ?? null,
+                        weight: exercise.weight ?? null,
+                        distance: exercise.distance ?? null,
+                        duration: exercise.duration ?? null,
+                        unit: exercise.unit,
+                        type: exercise.type,
+                        variant: exercise.variant,
+                    };
+                });
+            })
+            .filter((ex): ex is NonNullable<typeof ex> => ex !== null);
+
+        if (exerciseData.length > 0) {
+            exerciseData.forEach((ex) => store.createExercise(ex));
+        } else {
+            console.error("ExerciseData was empty after flatMap. Check if workoutDays matches dayRecords.");
+        }
+    }
+
+    store.createSession({
+        userId: user.id,
+        date: new Date().toISOString().split("T")[0],
+        sessionLength: data.sessionLength ?? null,
+        perfectDay: false,
+    });
+
+    return { success: true, userId: user.id };
 }

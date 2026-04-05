@@ -1,28 +1,22 @@
-import * as schema from "@/db/sqlite";
+import { useEffect } from "react";
 import { useRouter } from "expo-router";
-import { useEffect, useMemo } from "react";
-import { Screen } from "@/components/ui/view";
-import { useSQLiteContext } from "expo-sqlite";
-import { ActivityIndicator } from "react-native";
-import { drizzle, useLiveQuery } from "drizzle-orm/expo-sqlite";
+import { useUser } from "@/hooks/use-user";
+import { LoadingScreen } from "@/components/ui/screen-ui";
 
 export default function Index() {
-    const db = useSQLiteContext();
-    const drizzleDB = useMemo(() => drizzle(db, { schema }), [db]);
     const router = useRouter();
-
-    const { data: user, updatedAt } = useLiveQuery(drizzleDB.query.users.findFirst());
+    const { user, isLoading } = useUser();
 
     useEffect(() => {
-        if (updatedAt) {
-            if (user) router.replace("/(tabs)/home");
-            else router.replace("/onboarding" as any);
-        }
-    }, [user, updatedAt, router]);
+        if (isLoading) return;
 
-    return (
-        <Screen className="items-center justify-center">
-            <ActivityIndicator size="large" color="#3b82f6" />
-        </Screen>
-    );
+        if (!user) return router.replace("/onboarding");
+
+        const hasPlans = user.plans && user.plans.length > 0;
+        const destination = hasPlans ? "/(tabs)/home" : "/onboarding";
+
+        router.replace(destination);
+    }, [isLoading, router, user, user?.plans.length]);
+
+    return <LoadingScreen />;
 }

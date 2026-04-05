@@ -49,3 +49,4 @@ app-example
 # db
 *.db
 *.db-journal
+.env.local

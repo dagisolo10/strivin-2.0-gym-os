@@ -1,12 +1,12 @@
 import { Button, Input } from "../ui/button";
-import { Div, P, Card, Row, Label } from "../ui/view";
+import { Badge, Card, Div, Label, P, Row } from "../ui/view";
 
 import { cn } from "@/lib/utils";
+import { Exercise } from "@/types/model";
 import { DAY_ORDER } from "@/constants/data";
-import { Exercise } from "@/types/interface";
 import { getTemplate } from "@/constants/templates";
 import { useOnboardingStore } from "@/store/use-onboarding-store";
-import { Control, Controller, FieldValues, useFieldArray, useFormContext } from "react-hook-form";
+import { Control, Controller, FieldValues, useFieldArray, useFormContext, useWatch } from "react-hook-form";
 
 export default function Exercises() {
     const { split, workoutDays } = useOnboardingStore();
@@ -20,8 +20,8 @@ export default function Exercises() {
         if (!isNaN(parsed)) onChange(parsed);
     };
 
-    const getCustomDefault = (split: WorkoutSplit): Partial<Exercise> => {
-        const isEndurance = split === "Endurance";
+    const getCustomDefault = (currentSplit: WorkoutSplit): Partial<Exercise> => {
+        const isEndurance = currentSplit === "Endurance";
         return {
             name: "",
             type: isEndurance ? "Cardio" : "Push",
@@ -36,27 +36,83 @@ export default function Exercises() {
     };
 
     return (
-        <Div className="gap-6">
-            <AddCustom length={exercises.length} action={appendEx} onAddCustom={getCustomDefault} onAddTemplate={getTemplate} split={split} />
+        <Div className="gap-5">
+            {exercises.length === 0 ? <EmptyState action={appendEx} onAddCustom={getCustomDefault} split={split} /> : null}
 
-            {exercises.length > 0 &&
-                exercises.map((exercise: any, index) => (
-                    <Card key={exercise.id} className="relative gap-4 p-5">
-                        <Name control={control} split={split} index={index} onPress={removeEx} />
+            {exercises.map((exercise: any, index) => (
+                <ExerciseCard key={exercise.id} exercise={exercise} index={index} control={control} split={split} workoutDays={workoutDays} removeEx={removeEx} handleNumberChange={handleNumberChange} />
+            ))}
 
-                        <DistanceUnit type={exercise.type} control={control} index={index} onChangeText={handleNumberChange} />
-                        <SetsAndRep type={exercise.type} control={control} index={index} onChangeText={handleNumberChange} />
+            {exercises.length > 0 ? (
+                <Row className="gap-3">
+                    <Button variant="outline" className="flex-1 rounded-2xl" onPress={() => appendEx(getCustomDefault(split))}>
+                        Add Custom
+                    </Button>
+                    <Button variant="secondary" className="flex-1 rounded-2xl" onPress={() => appendEx(getTemplate(split)[0])}>
+                        Add Template Move
+                    </Button>
+                </Row>
+            ) : null}
+        </Div>
+    );
+}
 
-                        <Duration type={exercise.type} control={control} index={index} onChangeText={handleNumberChange} />
-                        <WeightUnit type={exercise.type} control={control} index={index} onChangeText={handleNumberChange} />
+function ExerciseCard({ exercise, index, control, split, workoutDays, removeEx, handleNumberChange }: any) {
+    const currentType = useWatch({ control, name: `exercises.${index}.type`, defaultValue: exercise.type });
 
-                        <DayAssignment control={control} index={index} workoutDays={workoutDays} />
-                        <Type control={control} index={index} />
-                        <Variant control={control} index={index} />
-                    </Card>
-                ))}
+    return (
+        <Card className="bg-background/50 gap-4 rounded-4xl border-0 p-5">
+            <Row>
+                <Badge variant="outline">Exercise {index + 1}</Badge>
+                <Button onPress={() => removeEx(index)} variant="outline" size="sm" textClassName="text-destructive">
+                    Remove
+                </Button>
+            </Row>
 
-            <AddExercise length={exercises.length} onAppend={getCustomDefault} action={appendEx} split={split} />
+            <ExerciseName control={control} split={split} index={index} />
+            <DayAssignment control={control} index={index} workoutDays={workoutDays} />
+            <Type control={control} index={index} />
+            <Variant control={control} index={index} />
+            <DistanceUnit type={currentType} control={control} index={index} onChangeText={handleNumberChange} />
+            <SetsAndRep type={currentType} control={control} index={index} onChangeText={handleNumberChange} />
+            <Duration type={currentType} control={control} index={index} onChangeText={handleNumberChange} />
+            <WeightUnit type={currentType} control={control} index={index} onChangeText={handleNumberChange} />
+        </Card>
+    );
+}
+
+function EmptyState({ action, onAddCustom, split }: AddEmptyProps) {
+    return (
+        <Card className="bg-muted/50 items-center gap-4 rounded-[28px] border-0 px-6 py-8">
+            <Badge variant="outline">Routine Builder</Badge>
+            <P className="text-center text-lg">Start from scratch or drop in a template and edit it.</P>
+            <P className="text-muted-foreground text-center text-sm">Everything stays local and editable after onboarding.</P>
+            <Row className="gap-3">
+                <Button onPress={() => action(onAddCustom(split))} variant="outline" className="rounded-2xl">
+                    Add Custom
+                </Button>
+                <Button onPress={() => action(getTemplate(split))} variant="secondary" className="rounded-2xl">
+                    Use Template
+                </Button>
+            </Row>
+        </Card>
+    );
+}
+
+function ExerciseName({ control, split, index }: ControlProp) {
+    return (
+        <Div>
+            <Label>Exercise Name</Label>
+            <Controller
+                name={`exercises.${index}.name`}
+                control={control}
+                render={({ field: { value, onChange }, fieldState: { error } }) => (
+                    <>
+                        <Input value={value} onChangeText={onChange} placeholder={split === "Endurance" ? "e.g. Steady State Run" : "e.g. Bench Press"} className="h-14 rounded-2xl text-base" />
+                        {error ? <P className="text-destructive text-sm">{error.message}</P> : null}
+                    </>
+                )}
+            />
         </Div>
     );
 }
@@ -64,90 +120,34 @@ export default function Exercises() {
 function DayAssignment({ control, index, workoutDays }: All & { workoutDays: Weekday[] }) {
     return (
         <Div>
-            <Label>Perform on:</Label>
-            <Row className="gap-2">
-                <Controller
-                    name={`exercises.${index}.workoutDays`}
-                    control={control}
-                    defaultValue={[]}
-                    render={({ field: { value = [], onChange }, fieldState: { error } }) => (
-                        <Div className="flex-1">
-                            <Row className="flex-wrap gap-2">
-                                {workoutDays
-                                    .sort((a, b) => DAY_ORDER[a] - DAY_ORDER[b])
-                                    .map((day) => {
-                                        const isSelected = value.includes(day);
-                                        return (
-                                            <Button
-                                                key={day}
-                                                variant={isSelected ? "primary" : "outline"}
-                                                className={cn(workoutDays.length > 3 ? "w-30" : "flex-1")}
-                                                onPress={() => {
-                                                    const next = isSelected ? value.filter((d: string) => d !== day) : [...value, day];
-                                                    onChange(next);
-                                                }}>
-                                                <P className={isSelected ? "text-white" : "text-zinc-400"}>{day.substring(0, 3)}</P>
-                                            </Button>
-                                        );
-                                    })}
-                            </Row>
-                            {error && <Label className="text-destructive">{error.message}</Label>}
+            <Label>Perform On</Label>
+            <Controller
+                name={`exercises.${index}.workoutDays`}
+                control={control}
+                defaultValue={[]}
+                render={({ field: { value = [], onChange }, fieldState: { error } }) => (
+                    <>
+                        <Div className="row flex-wrap gap-3">
+                            {workoutDays
+                                .sort((a, b) => DAY_ORDER[a] - DAY_ORDER[b])
+                                .map((day) => (
+                                    <Button
+                                        key={day}
+                                        variant={value.includes(day) ? "secondary" : "outline"}
+                                        className={cn("min-w-21 flex-1 rounded-2xl px-4")}
+                                        onPress={() => {
+                                            const next = value.includes(day) ? value.filter((d: string) => d !== day) : [...value, day];
+                                            onChange(next);
+                                        }}>
+                                        {day.slice(0, 3)}
+                                    </Button>
+                                ))}
                         </Div>
-                    )}
-                />
-            </Row>
+                        {error ? <P className="text-destructive text-sm">{error.message}</P> : null}
+                    </>
+                )}
+            />
         </Div>
-    );
-}
-
-function AddExercise({ length, onAppend, action, split }: AddExProp) {
-    if (length === 0) return null;
-
-    return (
-        <Button variant="outline" onPress={() => action(onAppend(split))}>
-            + Add More Exercises
-        </Button>
-    );
-}
-
-function AddCustom({ action, onAddCustom, onAddTemplate, split, length }: AddCustomProp) {
-    if (length > 0) return null;
-
-    return (
-        <Div className="items-center justify-center rounded-2xl border-2 border-dashed border-zinc-800 p-10">
-            <P className="mb-4 text-center text-zinc-400">Empty routine. Start fresh or use a starter pack.</P>
-            <Div className="gap-3">
-                <Button onPress={() => action(onAddCustom(split))} variant="secondary">
-                    + Add Custom
-                </Button>
-                <Button onPress={() => action(onAddTemplate(split))} variant="primary">
-                    Use Template for {split}
-                </Button>
-            </Div>
-        </Div>
-    );
-}
-
-function Name({ control, split, index, onPress }: ControlProp) {
-    return (
-        <Row className="items-end gap-4">
-            <Div className="flex-1">
-                <Label>Exercise Name</Label>
-                <Controller
-                    name={`exercises.${index}.name`}
-                    control={control}
-                    render={({ field: { value, onChange }, fieldState: { error } }) => (
-                        <>
-                            <Input value={value} onChangeText={onChange} placeholder={split === "Endurance" ? "e.g. Steady State Run" : "e.g. Bench Press"} />
-                            {error && <Label className="text-destructive">{error.message}</Label>}
-                        </>
-                    )}
-                />
-            </Div>
-            <Button onPress={() => onPress(index)} variant="outline" size="sm" textClassName="text-red-400">
-                Remove
-            </Button>
-        </Row>
     );
 }
 
@@ -156,33 +156,30 @@ function DistanceUnit({ control, index, onChangeText, type }: ChangeProp) {
 
     return (
         <Div>
-            <Label>Target Distance</Label>
+            <Label>Distance</Label>
             <Row className="gap-3">
                 <Controller
                     name={`exercises.${index}.distance`}
                     control={control}
                     render={({ field: { value, onChange }, fieldState: { error } }) => (
-                        <>
-                            <Input className="flex-1" keyboardType="decimal-pad" value={value?.toString()} onChangeText={(v) => onChangeText(v, onChange)} placeholder="km/mi" />
-                            {error && <Label className="text-destructive">{error.message}</Label>}
-                        </>
+                        <Div className="flex-1 gap-2">
+                            <Input className="rounded-2xl text-base" keyboardType="decimal-pad" value={value?.toString()} onChangeText={(v) => onChangeText(v, onChange)} placeholder="5" />
+                            {error ? <P className="text-destructive text-sm">{error.message}</P> : null}
+                        </Div>
                     )}
                 />
 
                 <Controller
                     name={`exercises.${index}.unit`}
                     control={control}
-                    render={({ field: { value, onChange }, fieldState: { error } }) => (
-                        <>
-                            <Row className="gap-2">
-                                {["km", "mi"].map((unit) => (
-                                    <Button key={unit} variant={value === unit ? "primary" : "outline"} size="icon" onPress={() => onChange(unit)}>
-                                        <P className={cn(value === unit ? "text-white" : "text-zinc-400")}>{unit}</P>
-                                    </Button>
-                                ))}
-                            </Row>
-                            {error && <Label className="text-destructive">{error.message}</Label>}
-                        </>
+                    render={({ field: { value, onChange } }) => (
+                        <Row className="gap-2">
+                            {["km", "mi"].map((unit) => (
+                                <Button key={unit} variant={value === unit ? "secondary" : "outline"} size="icon" onPress={() => onChange(unit)}>
+                                    {unit}
+                                </Button>
+                            ))}
+                        </Row>
                     )}
                 />
             </Row>
@@ -202,12 +199,13 @@ function SetsAndRep({ control, index, onChangeText, type }: ChangeProp) {
                     control={control}
                     render={({ field: { value, onChange }, fieldState: { error } }) => (
                         <>
-                            <Input keyboardType="number-pad" value={value?.toString()} onChangeText={(v) => onChangeText(v, onChange)} />
-                            {error && <Label className="text-destructive">{error.message}</Label>}
+                            <Input className="rounded-2xl text-base" keyboardType="number-pad" value={value?.toString()} onChangeText={(v) => onChangeText(v, onChange)} />
+                            {error ? <P className="text-destructive text-sm">{error.message}</P> : null}
                         </>
                     )}
                 />
             </Div>
+
             <Div className="flex-1">
                 <Label>Reps</Label>
                 <Controller
@@ -215,8 +213,8 @@ function SetsAndRep({ control, index, onChangeText, type }: ChangeProp) {
                     control={control}
                     render={({ field: { value, onChange }, fieldState: { error } }) => (
                         <>
-                            <Input keyboardType="number-pad" value={value?.toString()} onChangeText={(v) => onChangeText(v, onChange)} />
-                            {error && <Label className="text-destructive">{error.message}</Label>}
+                            <Input className="rounded-2xl text-base" keyboardType="number-pad" value={value?.toString()} onChangeText={(v) => onChangeText(v, onChange)} />
+                            {error ? <P className="text-destructive text-sm">{error.message}</P> : null}
                         </>
                     )}
                 />
@@ -236,8 +234,8 @@ function Duration({ control, index, onChangeText, type }: ChangeProp) {
                 control={control}
                 render={({ field: { value, onChange }, fieldState: { error } }) => (
                     <>
-                        <Input keyboardType="decimal-pad" value={value?.toString()} onChangeText={(v) => onChangeText(v, onChange)} placeholder="Time" />
-                        {error && <Label className="text-destructive">{error.message}</Label>}
+                        <Input className="rounded-2xl text-base" keyboardType="decimal-pad" value={value?.toString()} onChangeText={(v) => onChangeText(v, onChange)} placeholder="30" />
+                        {error ? <P className="text-destructive text-sm">{error.message}</P> : null}
                     </>
                 )}
             />
@@ -256,26 +254,23 @@ function WeightUnit({ control, index, onChangeText, type }: ChangeProp) {
                     name={`exercises.${index}.weight`}
                     control={control}
                     render={({ field: { value, onChange }, fieldState: { error } }) => (
-                        <>
-                            <Input className="flex-1" keyboardType="decimal-pad" value={value?.toString()} onChangeText={(v) => onChangeText(v, onChange)} />
-                            {error && <Label className="text-destructive">{error.message}</Label>}
-                        </>
+                        <Div className="flex-1 gap-2">
+                            <Input className="rounded-2xl text-base" keyboardType="decimal-pad" value={value?.toString()} onChangeText={(v) => onChangeText(v, onChange)} placeholder="20" />
+                            {error ? <P className="text-destructive text-sm">{error.message}</P> : null}
+                        </Div>
                     )}
                 />
                 <Controller
                     name={`exercises.${index}.unit`}
                     control={control}
-                    render={({ field: { value, onChange }, fieldState: { error } }) => (
-                        <>
-                            <Row className="gap-2">
-                                {["kg", "lb"].map((unit) => (
-                                    <Button key={unit} variant={value === unit ? "primary" : "outline"} size="icon" onPress={() => onChange(unit)}>
-                                        <P className={cn(value === unit ? "text-white" : "text-zinc-400")}>{unit}</P>
-                                    </Button>
-                                ))}
-                            </Row>
-                            {error && <Label className="text-destructive">{error.message}</Label>}
-                        </>
+                    render={({ field: { value, onChange } }) => (
+                        <Row className="gap-2">
+                            {["kg", "lb"].map((unit) => (
+                                <Button key={unit} variant={value === unit ? "secondary" : "outline"} size="icon" onPress={() => onChange(unit)}>
+                                    {unit}
+                                </Button>
+                            ))}
+                        </Row>
                     )}
                 />
             </Row>
@@ -285,15 +280,15 @@ function WeightUnit({ control, index, onChangeText, type }: ChangeProp) {
 
 function Type({ control, index }: All) {
     return (
-        <Div className="flex-1">
+        <Div>
             <Label>Type</Label>
             <Controller
                 name={`exercises.${index}.type`}
                 control={control}
                 render={({ field: { value, onChange } }) => (
-                    <Div className="gap-2">
-                        {["Push", "Pull", "Legs", "Core", "Cardio"].map((type) => (
-                            <Button className="w-full" key={type} variant={value === type ? "primary" : "outline"} onPress={() => onChange(type)}>
+                    <Div className="row flex-wrap gap-2">
+                        {(["Push", "Pull", "Legs", "Core", "Cardio"] as const).map((type) => (
+                            <Button className="min-w-24 flex-1 rounded-2xl px-4" key={type} variant={value === type ? "secondary" : "outline"} onPress={() => onChange(type)}>
                                 {type}
                             </Button>
                         ))}
@@ -306,16 +301,16 @@ function Type({ control, index }: All) {
 
 function Variant({ control, index }: All) {
     return (
-        <Div className="flex-1">
+        <Div>
             <Label>Variant</Label>
             <Controller
                 name={`exercises.${index}.variant`}
                 control={control}
                 render={({ field: { value, onChange } }) => (
-                    <Div className="row flex-wrap justify-evenly gap-2">
-                        {["Upper", "Lower", "Endurance"].map((type) => (
-                            <Button className="flex-1 px-0" key={type} variant={value === type ? "primary" : "outline"} onPress={() => onChange(type)}>
-                                {type}
+                    <Div className="row flex-wrap gap-2">
+                        {(["Upper", "Lower", "Endurance"] as const).map((variant) => (
+                            <Button className="flex-1 rounded-2xl px-4" key={variant} variant={value === variant ? "secondary" : "outline"} onPress={() => onChange(variant)}>
+                                {variant}
                             </Button>
                         ))}
                     </Div>
@@ -332,7 +327,6 @@ interface All {
 
 interface ControlProp extends All {
     split: string;
-    onPress: (index: number) => void;
 }
 
 interface ChangeProp extends All {
@@ -340,17 +334,8 @@ interface ChangeProp extends All {
     type: string;
 }
 
-interface AddCustomProp {
-    onAddCustom: (split: WorkoutSplit) => Partial<Exercise>;
-    onAddTemplate: (split: WorkoutSplit) => Partial<Exercise>[];
+interface AddEmptyProps {
     action: (value: Partial<Exercise> | Partial<Exercise>[]) => void;
-    split: WorkoutSplit;
-    length: number;
-}
-
-interface AddExProp {
-    length: number;
-    action: (value: Partial<Exercise>) => void;
-    onAppend: (split: WorkoutSplit) => Partial<Exercise>;
+    onAddCustom: (split: WorkoutSplit) => Partial<Exercise>;
     split: WorkoutSplit;
 }

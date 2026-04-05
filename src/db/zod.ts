@@ -31,5 +31,7 @@ export const onboardingSchema = z.object({
     workoutDays: z.array(z.string()).min(1, "Pick at least one day"),
     exercises: z.array(exerciseSchema).optional(),
     goal: z.string().optional(),
+    sessionLength: z.number().min(15, "Session length should be at least 15 minutes").max(180, "Keep session length under 180 minutes").optional(),
+    fitnessLevel: z.enum(["Beginner", "Intermediate", "Advanced"]).optional(),
     profile: z.string().optional(),
 });

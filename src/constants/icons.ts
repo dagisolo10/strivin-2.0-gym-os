@@ -1,5 +1,6 @@
 import add from "../../assets/icons/add.png";
 import back from "../../assets/icons/back.png";
+import logo from "../../assets/icons/logo.png";
 import home from "../../assets/icons/home.png";
 import menu from "../../assets/icons/menu.png";
 import plus from "../../assets/icons/plus.png";
@@ -21,6 +22,7 @@ export const icons = {
     wallet,
     setting,
     activity,
+    logo,
     add,
     back,
     menu,

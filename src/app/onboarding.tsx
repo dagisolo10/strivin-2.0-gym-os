@@ -1,11 +1,11 @@
+import { z } from "zod";
 import { cn } from "@/lib/utils";
 import { useRouter } from "expo-router";
 import { onboardingSchema } from "@/db/zod";
 import { Button } from "@/components/ui/button";
 import { registerUser } from "@/server/onboard";
-import { Div, H1, P } from "@/components/ui/view";
 import Goals from "@/components/onboarding/goals";
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Name from "@/components/onboarding/name-input";
 import Profile from "@/components/onboarding/profile";
@@ -17,25 +17,51 @@ import { STEP_CONTENT, TOTAL_STEPS } from "@/constants/data";
 import { KeyboardAvoidingView, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useOnboardingStore } from "@/store/use-onboarding-store";
+import { Badge, Card, Div, H1, P, Row } from "@/components/ui/view";
 import FloatingBarbell from "@/components/onboarding/floating-barbell";
 import { ScrollView, GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, { FadeInRight, FadeInUp, FadeOutLeft, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from "react-native-reanimated";
+
+type OnboardingFormValues = z.infer<typeof onboardingSchema>;
 
 export default function Onboarding() {
     const router = useRouter();
     const [step, setStep] = useState(0);
     const translateY = useSharedValue(0);
 
-    const { profile, updateField, ...values } = useOnboardingStore();
-    const methods = useForm({ resolver: zodResolver(onboardingSchema), defaultValues: { ...values } });
+    const updateField = useOnboardingStore((state) => state.updateField);
+    const resetStore = useOnboardingStore((state) => state.reset);
+
+    const storedName = useOnboardingStore((state) => state.name);
+    const storedSplit = useOnboardingStore((state) => state.split);
+    const storedWorkoutDays = useOnboardingStore((state) => state.workoutDays);
+    const storedExercises = useOnboardingStore((state) => state.exercises);
+    const storedGoal = useOnboardingStore((state) => state.goal);
+    const storedSessionLength = useOnboardingStore((state) => state.sessionLength);
+    const storedFitnessLevel = useOnboardingStore((state) => state.fitnessLevel);
+    const storedProfile = useOnboardingStore((state) => state.profile);
+
+    const methods = useForm<OnboardingFormValues>({
+        resolver: zodResolver(onboardingSchema),
+        defaultValues: {
+            name: storedName,
+            split: storedSplit,
+            workoutDays: storedWorkoutDays,
+            exercises: storedExercises,
+            goal: storedGoal,
+            sessionLength: storedSessionLength,
+            fitnessLevel: storedFitnessLevel,
+            profile: storedProfile ?? "",
+        },
+    });
 
     const bobbingStyle = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }] }));
-
     const display = STEP_CONTENT[step as keyof typeof STEP_CONTENT];
 
-    const prevStep = () => setStep((step) => Math.max(step - 1, 0));
+    const prevStep = () => setStep((currentStep) => Math.max(currentStep - 1, 0));
+
     const nextStep = async () => {
-        const fieldsByStep: Record<number, any> = { 1: ["name"], 2: ["workoutDays", "split"], 3: ["exercises"], 4: ["goal"], 5: ["profile"] };
+        const fieldsByStep: Partial<Record<number, (keyof OnboardingFormValues)[]>> = { 1: ["name"], 2: ["workoutDays", "split"], 3: ["exercises"], 4: ["goal", "sessionLength", "fitnessLevel"], 5: ["profile"] };
         const fieldsToValidate = fieldsByStep[step];
 
         if (fieldsToValidate && !(await methods.trigger(fieldsToValidate))) return;
@@ -44,15 +70,30 @@ export default function Onboarding() {
 
         if (step === TOTAL_STEPS) {
             try {
-                console.log("Saving to SQLite:", { ...currentValues, profile });
-                await registerUser(currentValues as any);
+                await registerUser({
+                    name: currentValues.name,
+                    split: currentValues.split as WorkoutSplit,
+                    goal: currentValues.goal as Goal | undefined,
+                    sessionLength: currentValues.sessionLength,
+                    fitnessLevel: currentValues.fitnessLevel as FitnessLevel | undefined,
+                    exercises: currentValues.exercises?.map((exercise) => ({
+                        ...exercise,
+                        workoutDays: exercise.workoutDays as Weekday[],
+                        unit: exercise.unit as Unit,
+                        type: exercise.type as ExerciseType,
+                        variant: exercise.variant as ExerciseVariant,
+                    })),
+                    workoutDays: currentValues.workoutDays as Weekday[],
+                    profile: currentValues.profile || null,
+                });
+                resetStore();
                 router.replace("/(tabs)/home");
             } catch (error) {
                 console.error("Failed to save onboarding data:", error);
             }
         } else {
-            (Object.keys(currentValues) as (keyof typeof currentValues)[]).forEach((key) => updateField(key, currentValues[key] as any));
-            setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+            (Object.keys(currentValues) as (keyof OnboardingFormValues)[]).forEach((key) => updateField(key, currentValues[key]));
+            setStep((currentStep) => Math.min(currentStep + 1, TOTAL_STEPS));
         }
     };
 
@@ -61,44 +102,63 @@ export default function Onboarding() {
     }, [translateY]);
 
     return (
-        <Div className="bg-dead-zone dark flex-1">
+        <Div className="bg-dead-zone flex-1">
             <SafeAreaView style={{ flex: 1 }}>
-                <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1 px-4 pt-12">
-                    <Div className="mb-8 h-1.5 w-full overflow-hidden rounded-full bg-zinc-800">
-                        <Animated.View layout={FadeInUp} className={cn(step === TOTAL_STEPS ? "bg-success" : "bg-primary", "h-full")} style={{ width: `${(step / TOTAL_STEPS) * 100}%` }} />
+                <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="bg-background flex-1 px-5 pt-8">
+                    <Div className="gap-6">
+                        <Row>
+                            <Badge variant="outline">Setup</Badge>
+                            <P className="text-muted-foreground text-sm">
+                                Step {Math.min(step + 1, TOTAL_STEPS + 1)} of {TOTAL_STEPS + 1}
+                            </P>
+                        </Row>
+
+                        <Div className="bg-muted h-2 w-full overflow-hidden rounded-full">
+                            <Animated.View layout={FadeInUp} className={cn(step === TOTAL_STEPS ? "bg-success" : "bg-primary", "h-full rounded-full")} style={{ width: `${(step / TOTAL_STEPS) * 100}%` }} />
+                        </Div>
                     </Div>
 
                     <FormProvider {...methods}>
                         <GestureHandlerRootView>
-                            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
-                                <Animated.View key={`header-${step}`} entering={FadeInUp.delay(100)} className="mb-10 items-center gap-3">
-                                    <H1 className="text-center text-4xl tracking-tight">{display.title}</H1>
-                                    <P className="text-muted-foreground text-center text-lg leading-6">{display.subtitle}</P>
-                                </Animated.View>
+                            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, paddingTop: 24, paddingBottom: 24 }}>
+                                <Card className="bg-accent mb-6 gap-3 rounded-4xl border-0 px-6 py-6">
+                                    <Animated.View key={`header-${step}`} entering={FadeInUp.delay(100)} className="gap-3">
+                                        <H1 className="text-4xl tracking-tight text-white">{display.title}</H1>
+                                        <P className="max-w-[320px] text-base leading-6 text-white/85">{display.subtitle}</P>
+                                    </Animated.View>
+                                </Card>
 
-                                <Div className="flex-1 pb-6">
+                                <Div className="flex-1">
                                     <Animated.View key={`step-${step}`} entering={FadeInRight.duration(400)} exiting={FadeOutLeft.duration(400)}>
-                                        {step === 0 && <FloatingBarbell style={bobbingStyle} />}
-                                        {step === 1 && <Name />}
-                                        {step === 2 && <Frequency />}
-                                        {step === 3 && <Exercises />}
-                                        {step === 4 && <Goals />}
-                                        {step === 5 && <Profile />}
-                                        {step === 6 && <Finish />}
+                                        {step === 0 ? (
+                                            <Card className="bg-muted items-center rounded-4xl border-0 px-6 py-10">
+                                                <FloatingBarbell style={bobbingStyle} />
+                                                <Div className="gap-3">
+                                                    <P className="text-center text-lg">Build your training system once, then log everything locally without friction.</P>
+                                                    <P className="text-muted-foreground text-center text-sm">We&apos;ll set up your split, weekly schedule, and the first version of your routine.</P>
+                                                </Div>
+                                            </Card>
+                                        ) : null}
+                                        {step === 1 ? <Name /> : null}
+                                        {step === 2 ? <Frequency /> : null}
+                                        {step === 3 ? <Exercises /> : null}
+                                        {step === 4 ? <Goals /> : null}
+                                        {step === 5 ? <Profile /> : null}
+                                        {step === 6 ? <Finish /> : null}
                                     </Animated.View>
                                 </Div>
                             </ScrollView>
                         </GestureHandlerRootView>
                     </FormProvider>
 
-                    <Div className="flex-row items-center gap-4 border-t border-zinc-800 py-6">
-                        {step > 0 && step < TOTAL_STEPS && (
-                            <Button onPress={prevStep} variant="outline" className="flex-1 py-4">
-                                <P className="font-semibold text-zinc-400">Back</P>
+                    <Div className="border-border flex-row items-center gap-4 border-t py-5">
+                        {step > 0 && step < TOTAL_STEPS ? (
+                            <Button onPress={prevStep} variant="outline" className="rounded-2xl">
+                                Back
                             </Button>
-                        )}
-                        <Button variant={step === TOTAL_STEPS ? "success" : "primary"} onPress={nextStep} className={cn("flex-2 py-4")}>
-                            <P className="font-bold text-white">{step === 0 ? "Get Started" : step === TOTAL_STEPS ? "Go to Dashboard" : "Continue"}</P>
+                        ) : null}
+                        <Button variant={step === TOTAL_STEPS ? "success" : "primary"} onPress={nextStep} className={cn("rounded-2xl", step === 0 ? "w-full" : "flex-1")}>
+                            {step === 0 ? "Get Started" : step === TOTAL_STEPS ? "Go to Dashboard" : "Continue"}
                         </Button>
                     </Div>
                 </KeyboardAvoidingView>

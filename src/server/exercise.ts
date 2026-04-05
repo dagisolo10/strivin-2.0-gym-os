@@ -1,36 +1,38 @@
-import * as schema from "@/db/sqlite";
-import { ExpoSQLiteDatabase } from "drizzle-orm/expo-sqlite";
+import { useStaticStore, Exercise } from "@/store/use-static-store";
 
-type NewExercise = Omit<typeof schema.exercises.$inferInsert, "workoutDayId">;
+type NewExercise = Omit<Exercise, "id" | "userId" | "planId" | "workoutDayId">;
 
 interface Data {
+    userId: number;
     planId: number;
     exercise: NewExercise;
     workoutDays: Weekday[];
 }
 
-export async function addExercise(data: Data, drizzleDB: ExpoSQLiteDatabase<typeof schema>) {
+export async function addExercise(data: Data) {
     try {
-        const plan = await drizzleDB.query.workoutPlans.findFirst({ where: (workoutPlans, { eq }) => eq(workoutPlans.id, data.planId) });
+        const store = useStaticStore.getState();
+        const plan = store.plans.find((p) => p.id === data.planId);
         if (!plan) return { success: false, error: "Plan not found" };
 
-        await drizzleDB.transaction(async (tx) => {
-            for (const day of data.workoutDays) {
-                const workoutDay = await tx.query.workoutDays.findFirst({
-                    where: (workoutDays, { eq, and }) => and(eq(workoutDays.planId, plan.id), eq(workoutDays.dayName, day)),
+        for (const day of data.workoutDays) {
+            let workoutDay = store.workoutDays.find((d) => d.planId === plan.id && d.dayName === day);
+
+            if (!workoutDay) {
+                workoutDay = store.createWorkoutDay({
+                    userId: data.userId,
+                    dayName: day,
+                    planId: plan.id,
                 });
-                let workoutDayId;
-
-                if (!workoutDay) {
-                    const [newDay] = await tx.insert(schema.workoutDays).values({ dayName: day, planId: plan.id }).returning({ id: schema.workoutDays.id });
-                    workoutDayId = newDay.id;
-                } else {
-                    workoutDayId = workoutDay.id;
-                }
-
-                await tx.insert(schema.exercises).values({ ...data.exercise, workoutDayId });
             }
-        });
+
+            store.createExercise({
+                ...data.exercise,
+                userId: data.userId,
+                planId: data.planId,
+                workoutDayId: workoutDay.id,
+            });
+        }
 
         return { success: true };
     } catch (error) {

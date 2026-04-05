@@ -1,5 +1,5 @@
-import { Div, P } from "../ui/view";
 import { Button } from "../ui/button";
+import { Badge, Card, Div, P } from "../ui/view";
 
 import { Image } from "react-native";
 import * as Haptics from "expo-haptics";
@@ -18,6 +18,7 @@ export default function Profile() {
                 aspect: [1, 1],
                 quality: 0.5,
             });
+
             if (!result.canceled) {
                 onChange(result.assets[0].uri);
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -26,22 +27,23 @@ export default function Profile() {
             console.error("Failed to pick image:", error);
         }
     };
+
     return (
-        <Div className="items-center gap-6">
+        <Card className="bg-muted/50 items-center gap-5 rounded-[28px] border-0 px-5 py-6">
+            <Badge variant="outline">Avatar</Badge>
             <Controller
                 name="profile"
                 control={control}
                 render={({ field: { value, onChange } }) => (
                     <Div className="items-center gap-4">
-                        <Button onPress={() => pickImage(onChange)} className="size-32 overflow-hidden rounded-full border-2 border-dashed border-zinc-800 bg-zinc-900/50 p-0">
-                            {value ? <Image source={{ uri: value }} className="size-full rounded-full" /> : <Ionicons name="camera-outline" size={32} color="#52525b" />}
+                        <Button onPress={() => pickImage(onChange)} className="border-border bg-background size-36 overflow-hidden rounded-full border-2 border-dashed p-0">
+                            {value ? <Image source={{ uri: value }} className="size-full rounded-full" /> : <Ionicons name="camera-outline" size={32} color="#527bda" />}
                         </Button>
-                        <P className="text-sm font-medium text-zinc-500">Tap to upload avatar</P>
+                        <P>Tap to upload a profile photo</P>
+                        <P className="text-muted-foreground text-center text-sm">Optional, but it makes the app feel like yours right away.</P>
                     </Div>
                 )}
             />
-
-            <P className="text-muted-foreground text-sm">This is how you&apos;ll appear in your stats.</P>
-        </Div>
+        </Card>
     );
 }
