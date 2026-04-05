@@ -19,10 +19,11 @@ export function calculateStreak(sessions: { date: string; perfectDay: boolean | 
 
     const todayKey = getDateKey();
     const latestSession = perfectSessions[0];
-    const latestDateKey = latestSession?.date ? getDateKey(new Date(latestSession.date)) : null;
+    const latestDateKey = latestSession?.date ?? null;
 
     for (const session of perfectSessions) {
-        const currentDate = new Date(session.date);
+        const [year, month, day] = session.date.split("-").map(Number);
+        const currentDate = new Date(year, month - 1, day);
 
         if (!previousDate) {
             tempStreak = 1;

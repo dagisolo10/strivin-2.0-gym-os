@@ -206,7 +206,7 @@ export default function AddExerciseScreen() {
 
                 <Card className="gap-3 rounded-[28px] border-0 bg-[#FFF1D6] px-5 py-5">
                     <Badge variant="outline">Coach note</Badge>
-                    <P className="text-sm">Use specific names like &quote;Incline Dumbbell Press&quote; or &quote;Treadmill Tempo Run&quote; so logging later feels immediate and precise.</P>
+                    <P className="text-sm">Use specific names like &quot;Incline Dumbbell Press&quot; or &quot;Treadmill Tempo Run&quot; so logging later feels immediate and precise.</P>
                 </Card>
 
                 <Button onPress={handleSubmit(registerEx, onInvalid)} className="h-16 rounded-2xl">

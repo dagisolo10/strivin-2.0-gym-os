@@ -13,7 +13,7 @@ export const usePlanStore = create<PlanState>((set) => ({
     syncSelectedPlan: (planIds) =>
         set((state) => {
             if (!planIds.length) return { selectedPlanId: null };
-            if (state.selectedPlanId && planIds.includes(state.selectedPlanId)) return state;
+            if (state.selectedPlanId !== null && planIds.includes(state.selectedPlanId)) return state;
             return { selectedPlanId: planIds[0] };
         }),
     clearSelectedPlan: () => set({ selectedPlanId: null }),

@@ -308,7 +308,7 @@ function Variant({ control, index }: All) {
                 control={control}
                 render={({ field: { value, onChange } }) => (
                     <Div className="row flex-wrap gap-2">
-                        {(["Upper", "Lower", "Endurance"] as const).map((variant) => (
+                        {(["Upper", "Lower", "Endurance", "Full Body"] as const).map((variant) => (
                             <Button className="flex-1 rounded-2xl px-4" key={variant} variant={value === variant ? "secondary" : "outline"} onPress={() => onChange(variant)}>
                                 {variant}
                             </Button>

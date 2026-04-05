@@ -36,11 +36,10 @@ export default function PlanEditorScreen() {
     const syncSelectedPlan = usePlanStore((state) => state.syncSelectedPlan);
 
     const plans = useMemo(() => user?.plans ?? [], [user?.plans]);
-    const planIds = plans.map((plan) => plan.id).join("|");
 
     useEffect(() => {
         syncSelectedPlan(plans.map((plan) => plan.id));
-    }, [planIds, plans, syncSelectedPlan]);
+    }, [plans, syncSelectedPlan]);
 
     const activePlan = plans.find((plan) => plan.id === selectedPlanId) ?? plans[0];
 
@@ -115,8 +114,10 @@ export default function PlanEditorScreen() {
         });
 
         const result = await request;
-        if (result.success) setSelectedPlanId(result.planId);
-        router.back();
+        if (result.success) {
+            setSelectedPlanId(result.planId);
+            router.back();
+        }
     };
 
     return (

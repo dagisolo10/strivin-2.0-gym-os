@@ -37,8 +37,8 @@ export default function HomeScreen() {
     const streak = calculateStreak(userSessions);
 
     useEffect(() => {
-        if (user?.plans) syncSelectedPlan(plans.map((plan) => plan.id));
-    }, [plans, syncSelectedPlan, user?.plans]);
+        if (plans) syncSelectedPlan(plans.map((plan) => plan.id));
+    }, [syncSelectedPlan, plans]);
 
     if (isLoading) return <LoadingScreen />;
 

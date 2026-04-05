@@ -97,6 +97,10 @@ export async function saveWorkoutPlan(data: SavePlanInput) {
 export async function deleteWorkoutPlan(userId: number, planId: number) {
     try {
         const store = useStaticStore.getState();
+
+        const plan = store.plans.find((plan) => plan.id === planId);
+        if (!plan || plan.userId !== userId) throw new Error("Plan not found");
+
         const deleted = store.deletePlan(planId);
         if (!deleted) throw new Error("Plan not found");
         return { success: true as const };

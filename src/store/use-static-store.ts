@@ -88,21 +88,6 @@ export interface UserWithRelations extends User {
     sessions: WorkoutSessionWithLogs[];
 }
 
-// Generate unique IDs
-let nextUserId = 1;
-let nextPlanId = 1;
-let nextDayId = 1;
-let nextExerciseId = 1;
-let nextSessionId = 1;
-let nextLogId = 1;
-
-const generateUserId = () => nextUserId++;
-const generatePlanId = () => nextPlanId++;
-const generateDayId = () => nextDayId++;
-const generateExerciseId = () => nextExerciseId++;
-const generateSessionId = () => nextSessionId++;
-const generateLogId = () => nextLogId++;
-
 // Initial static data with 2 plans
 const initialUsers: User[] = [
     {
@@ -189,7 +174,7 @@ const initialExercises: Exercise[] = [
     { id: 21, userId: 1, planId: 1, workoutDayId: 6, name: "Leg Curls", sets: 3, reps: 12, weight: 30, distance: null, duration: null, unit: "kg", type: "Legs", variant: "Lower" },
     // Sunday - Rest/Active Recovery
     { id: 22, userId: 1, planId: 1, workoutDayId: 7, name: "Light Jog", sets: 1, reps: null, weight: null, distance: 5, duration: 30, unit: "km", type: "Cardio", variant: "Endurance" },
-    { id: 23, userId: 1, planId: 1, workoutDayId: 7, name: "Stretching", sets: 1, reps: null, weight: null, distance: null, duration: 20, unit: "mins", type: "Core", variant: "Endurance" },
+    {id: 23, userId: 1, planId: 1, workoutDayId: 7, name: "Stretching", sets: 1, reps: null, weight: null, duration: 20, unit: "mins", type: "Core", variant: "Endurance", distance: null},
 
     // Plan 2 - Upper Lower exercises
     // Monday - Upper
@@ -259,7 +244,7 @@ const initialExercises: Exercise[] = [
     // Tuesday: Zone 2 (Day 22)
     { id: 68, userId: 1, planId: 5, workoutDayId: 22, name: "Steady Run", sets: 1, reps: null, weight: null, distance: 8, duration: 50, unit: "km", type: "Cardio", variant: "Endurance" },
     { id: 69, userId: 1, planId: 5, workoutDayId: 22, name: "Mobility Flow", sets: 1, reps: null, weight: null, distance: null, duration: 15, unit: "mins", type: "Core", variant: "Endurance" },
-    { id: 70, userId: 1, planId: 5, workoutDayId: 22, name: "Stretching", sets: 1, reps: null, weight: null, distance: null, duration: 10, unit: "mins", type: "Core", variant: "Endurance" },
+    {id: 70, userId: 1, planId: 5, workoutDayId: 22, name: "Stretching", sets: 1, reps: null, weight: null, duration: 10, unit: "mins", type: "Core", variant: "Endurance",        distance: null    },
     // Wednesday: Strength (Day 23)
     { id: 71, userId: 1, planId: 5, workoutDayId: 23, name: "Front Squat", sets: 4, reps: 8, weight: 60, distance: null, duration: null, unit: "kg", type: "Legs", variant: "Lower" },
     { id: 72, userId: 1, planId: 5, workoutDayId: 23, name: "Pendlay Row", sets: 4, reps: 8, weight: 70, distance: null, duration: null, unit: "kg", type: "Pull", variant: "Upper" },
@@ -271,7 +256,7 @@ const initialExercises: Exercise[] = [
     // Friday: Recovery Run (Day 25)
     { id: 77, userId: 1, planId: 5, workoutDayId: 25, name: "Light Jog", sets: 1, reps: null, weight: null, distance: 4, duration: 25, unit: "km", type: "Cardio", variant: "Endurance" },
     { id: 78, userId: 1, planId: 5, workoutDayId: 25, name: "Core Circuit", sets: 3, reps: 20, weight: null, distance: null, duration: null, unit: "reps", type: "Core", variant: "Upper" },
-    { id: 79, userId: 1, planId: 5, workoutDayId: 25, name: "Foam Rolling", sets: 1, reps: null, weight: null, distance: null, duration: 15, unit: "mins", type: "Core", variant: "Endurance" },
+    {id: 79, userId: 1, planId: 5, workoutDayId: 25, name: "Foam Rolling", sets: 1, reps: null, weight: null, duration: 15, unit: "mins", type: "Core", variant: "Endurance",        distance: null    },
 ];
 
 const initialSessions: WorkoutSession[] = [
@@ -310,6 +295,34 @@ const initialLogs: ExerciseLog[] = [
         date: getDateKey(),
     },
 ];
+
+// Helper to compute max ID from an array
+const getMaxId = (items: { id: number }[]): number => (items.length > 0 ? Math.max(...items.map((item) => item.id)) : 0);
+
+// Generate unique IDs - initialized from seeded data to avoid collisions
+let nextUserId = getMaxId(initialUsers) + 1;
+let nextPlanId = getMaxId(initialPlans) + 1;
+let nextDayId = getMaxId(initialWorkoutDays) + 1;
+let nextExerciseId = getMaxId(initialExercises) + 1;
+let nextSessionId = getMaxId(initialSessions) + 1;
+let nextLogId = getMaxId(initialLogs) + 1;
+
+// Function to reset ID counters based on current seeded data
+const resetIdCounters = () => {
+    nextUserId = getMaxId(initialUsers) + 1;
+    nextPlanId = getMaxId(initialPlans) + 1;
+    nextDayId = getMaxId(initialWorkoutDays) + 1;
+    nextExerciseId = getMaxId(initialExercises) + 1;
+    nextSessionId = getMaxId(initialSessions) + 1;
+    nextLogId = getMaxId(initialLogs) + 1;
+};
+
+const generateUserId = () => nextUserId++;
+const generatePlanId = () => nextPlanId++;
+const generateDayId = () => nextDayId++;
+const generateExerciseId = () => nextExerciseId++;
+const generateSessionId = () => nextSessionId++;
+const generateLogId = () => nextLogId++;
 
 interface StaticStoreState {
     // Data
@@ -685,6 +698,7 @@ export const useStaticStore = create<StaticStoreState>((set, get) => {
 
         // Reset
         resetToInitial: () => {
+            resetIdCounters();
             const initial = getInitialState();
             set(initial);
         },
