@@ -5,8 +5,6 @@ node_modules/
 
 dev/*
 
-.env.local
-
 # Expo
 .expo/
 dist/
@@ -49,3 +47,4 @@ app-example
 # db
 *.db
 *.db-journal
+.env.local

@@ -1,13 +1,16 @@
-import { P } from "../ui/view";
+import { Badge, Card, Div, H1, P } from "../ui/view";
 
 import { Ionicons } from "@expo/vector-icons";
-import Animated, { FadeInUp } from "react-native-reanimated";
 
 export default function Finish() {
     return (
-        <Animated.View entering={FadeInUp} className="items-center gap-4">
-            <Ionicons name="checkmark-circle" size={80} color="#22c55e" />
-            <P className="text-center text-zinc-400">Everything is synced. Your journey starts now.</P>
-        </Animated.View>
+        <Card className="bg-accent items-center gap-4 rounded-4xl border-0 px-6 py-8">
+            <Div className="size-20 items-center justify-center rounded-full bg-white/15">
+                <Ionicons name="checkmark" size={42} color="#fff9e3" />
+            </Div>
+            <Badge variant="glass">Ready</Badge>
+            <H1 className="text-center text-3xl text-white">Your plan is ready</H1>
+            <P className="max-w-70 text-center text-white/85">You’ve got a local-first setup, a structured routine, and the base screens ready for logging and progression.</P>
+        </Card>
     );
 }

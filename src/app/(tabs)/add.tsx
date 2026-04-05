@@ -1,33 +1,36 @@
 import { z } from "zod";
 import { cn } from "@/lib/utils";
-import * as schema from "@/db/sqlite";
 import { useRouter } from "expo-router";
 import { exerciseSchema } from "@/db/zod";
+import { useUser } from "@/hooks/use-user";
 import { toast } from "react-native-sonner";
 import { weekdays } from "@/constants/data";
-import { Exercise } from "@/types/interface";
-import { useSQLiteContext } from "expo-sqlite";
 import { addExercise } from "@/server/exercise";
 import { ActivityIndicator } from "react-native";
 import { AlertCircle } from "lucide-react-native";
 import React, { useEffect, useMemo } from "react";
-import { toOptionalNumber } from "@/lib/functions";
+import { usePlanStore } from "@/store/use-plan-store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button, Input } from "@/components/ui/button";
 import { ScrollView } from "react-native-gesture-handler";
-import { drizzle, useLiveQuery } from "drizzle-orm/expo-sqlite";
+import { toOptionalNumber } from "@/lib/helper-functions";
+import { PlanCarousel } from "@/components/plans/plan-carousel";
+import { Badge, Card, Div, H1, H2, P, Row, Screen } from "@/components/ui/view";
 import { useForm, Controller, FieldErrors, FieldValues } from "react-hook-form";
-import { Div, H1, P, Label, Badge, H2, Screen, Card, Row } from "@/components/ui/view";
+
+type AddExerciseValues = z.infer<typeof exerciseSchema>;
 
 export default function AddExerciseScreen() {
     const router = useRouter();
+    const { user, isLoading } = useUser();
+    const selectedPlanId = usePlanStore((state) => state.selectedPlanId);
+    const setSelectedPlanId = usePlanStore((state) => state.setSelectedPlanId);
+    const syncSelectedPlan = usePlanStore((state) => state.syncSelectedPlan);
 
-    const db = useSQLiteContext();
-    const drizzleDB = useMemo(() => drizzle(db, { schema }), [db]);
+    const plans = useMemo(() => user?.plans ?? [], [user?.plans]);
+    const planIds = useMemo(() => plans.map((plan) => plan.id).join("|"), [plans]);
 
-    const { data: user } = useLiveQuery(drizzleDB.query.users.findFirst({ with: { plans: { with: { days: { with: { exercises: true } } } } } }));
-
-    const { control, handleSubmit, watch, resetField, setValue, getValues } = useForm({
+    const { control, handleSubmit, watch, resetField, setValue, getValues } = useForm<AddExerciseValues>({
         resolver: zodResolver(exerciseSchema),
         defaultValues: {
             name: "",
@@ -40,6 +43,9 @@ export default function AddExerciseScreen() {
 
     const selectedType = watch("type");
     const selectedUnit = watch("unit");
+    const selectedDays = watch("workoutDays") ?? [];
+    const selectedVariant = watch("variant");
+    const exerciseName = watch("name");
     const isCardio = selectedType === "Cardio";
 
     useEffect(() => {
@@ -57,108 +63,206 @@ export default function AddExerciseScreen() {
         }
     }, [getValues, isCardio, resetField, selectedType, setValue]);
 
-    const plans = user?.plans;
+    useEffect(() => {
+        syncSelectedPlan(plans.map((plan) => plan.id));
+    }, [planIds, plans, syncSelectedPlan]);
 
-    if (!user) {
+    if (isLoading) {
         return (
-            <Screen className="items-center justify-center" scrollable={false}>
+            <Screen className="items-center justify-center">
                 <ActivityIndicator size="large" />
             </Screen>
         );
     }
 
-    if (!plans || plans.length === 0) {
+    if (!user) {
         return (
-            <Screen className="items-center justify-center px-6" scrollable={false}>
-                <P className="text-muted-foreground text-center">Create a workout plan before adding exercises.</P>
+            <Screen className="items-center justify-center px-6">
+                <P className="text-muted-foreground text-center">User not found.</P>
             </Screen>
         );
     }
 
-    const planId = plans[0].id;
+    const plan = plans.find((item) => item.id === selectedPlanId) ?? plans[0];
+    if (!plan) {
+        return (
+            <Screen className="items-center justify-center px-6">
+                <P className="text-muted-foreground text-center">Create a workout plan before adding exercises.</P>
+            </Screen>
+        );
+    }
 
     const onInvalid = (errors: FieldErrors<FieldValues>) => {
         const errorEntries = Object.entries(errors).filter(([_, error]) => error?.message);
         toast.custom(<ErrorToast errorEntries={errorEntries} />, { duration: 20000 });
     };
 
-    async function registerEx(data: z.infer<typeof exerciseSchema>) {
+    async function registerEx(data: AddExerciseValues) {
         const { workoutDays, ...exercises } = data;
 
         const payload = {
-            planId,
-            exercise: exercises as Exercise,
+            userId: user?.id ?? 0,
+            planId: plan.id,
+            exercise: exercises as any,
             workoutDays: workoutDays as Weekday[],
         };
 
         try {
-            const request = addExercise(payload, drizzleDB).then((result) => {
+            const request = addExercise(payload).then((result) => {
                 if (!result.success) throw new Error(String(result.error));
                 return result;
             });
 
             toast.promise(request, {
                 loading: "Adding Exercise...",
-                success: "Success",
+                success: "Exercise added",
                 error: "Failed to add exercise",
             });
 
             await request;
-
             router.replace("/(tabs)/home");
-        } catch (e) {
-            console.error(e);
+        } catch (error) {
+            console.error(error);
         }
     }
 
     return (
-        <Screen className="px-6 pt-8 pb-32">
-            <H1 className="text-foreground mb-2 text-3xl font-bold">New Exercise</H1>
-            <P className="text-muted-foreground mb-8">Define the technical details of this movement.</P>
+        <Screen className="px-6 py-8">
+            <Div className="gap-6 pb-16">
+                <Card className="bg-accent gap-4 rounded-4xl border-0 px-6 py-6">
+                    <Row className="items-start gap-4">
+                        <Div className="flex-1 gap-4">
+                            <Badge variant="glass">Exercise Studio</Badge>
+                            <Div className="gap-2">
+                                <H1 className="text-3xl text-white">Build a polished training block</H1>
+                                <P className="max-w-[320px] text-white/85">Create a movement, shape its workload, and slot it into your weekly plan with a cleaner, coach-like structure.</P>
+                            </Div>
+                        </Div>
+                        <Div className="rounded-[28px] bg-white/12 px-4 py-4">
+                            <P className="text-xs tracking-[2px] text-white/70 uppercase">Assigned</P>
+                            <P className="mt-1 text-2xl text-white">{selectedDays.length}</P>
+                            <P className="text-sm text-white/75">days ready</P>
+                        </Div>
+                    </Row>
+                    <Row className="gap-3">
+                        <HeroPill label="Plan" value={plan.split} />
+                        <HeroPill label="Days" value={`${plan.workoutDaysPerWeek}/week`} />
+                    </Row>
+                </Card>
 
-            <Div className="gap-6 pb-20">
-                <ExerciseNameField control={control} />
-                <Type control={control} />
-                <Variant control={control} />
-                <DayAssignment control={control} />
+                <PlanCarousel plans={plans} selectedPlanId={plan.id} onSelect={setSelectedPlanId} title="Destination Plan" subtitle="Pick the plan that should receive this movement before you save it." />
 
-                <Card className="bg-accent gap-2 rounded-3xl border-0">
-                    <Row className="items-center justify-between">
-                        <H2 className="text-background text-lg font-bold">Metrics</H2>
-                        <Badge variant="primary">{isCardio ? "Endurance" : "Strength"}</Badge>
+                <Card className="bg-background gap-5 rounded-[28px] border-0 px-5 py-5">
+                    <Row className="items-start gap-3">
+                        <Div className="flex-1">
+                            <SectionTitle eyebrow="Identity" title="Describe the movement" note="Start with the name, category, and placement so the routine stays easy to scan later." />
+                        </Div>
+                        <StatusChip label="Type" value={selectedType || "Choose"} muted={!selectedType} />
+                    </Row>
+                    <ExerciseNameField control={control} />
+                    <Type control={control} />
+                    <Variant control={control} />
+                    <DayAssignment control={control} />
+                </Card>
+
+                <Card className="bg-muted/50 gap-5 rounded-[28px] border-0 px-5 py-5">
+                    <Row>
+                        <SectionTitle eyebrow="Metrics" title="Define the training target" note={isCardio ? "Use time and distance for conditioning work." : "Use sets, reps, and weight for strength work."} />
+                        <Badge variant={isCardio ? "secondary" : "outline"}>{isCardio ? "Endurance" : "Strength"}</Badge>
                     </Row>
 
-                    <Duration control={control} isCardio={isCardio} />
-                    <SetsAndReps control={control} isCardio={isCardio} />
+                    {isCardio ? <Duration control={control} /> : <SetsAndReps control={control} />}
                     <UnitField control={control} isCardio={isCardio} unit={selectedUnit} />
                 </Card>
 
-                <Button onPress={handleSubmit(registerEx, onInvalid)} className="shadow-primary/30 mt-4 h-16 rounded-2xl shadow-lg">
-                    <P className="text-lg font-bold text-white">Add to Routine</P>
+                <Card className="bg-background gap-4 rounded-[28px] border-0 px-5 py-5">
+                    <SectionTitle eyebrow="Preview" title="Routine snapshot" note="A quick read on how this movement will present once it lands in the plan." />
+                    <Div className="bg-muted/40 gap-3 rounded-3xl px-4 py-4">
+                        <Row className="items-start">
+                            <Div className="flex-1 gap-1">
+                                <P className="text-base">{exerciseName?.trim() || "Unnamed movement"}</P>
+                                <P className="text-muted-foreground text-sm">
+                                    {selectedType || "Type pending"} {selectedVariant ? `• ${selectedVariant}` : ""}
+                                </P>
+                            </Div>
+                            <Badge variant={isCardio ? "secondary" : "outline"}>{selectedUnit || (isCardio ? "km" : "kg")}</Badge>
+                        </Row>
+
+                        <Div className="row flex-wrap gap-2">
+                            {selectedDays.length ? (
+                                selectedDays.map((day) => (
+                                    <Badge key={day} variant="muted">
+                                        {day}
+                                    </Badge>
+                                ))
+                            ) : (
+                                <Badge variant="outline">Assign workout days</Badge>
+                            )}
+                        </Div>
+
+                        <P className="text-muted-foreground text-sm">{isCardio ? "This will track distance and duration in the day logger." : "This will show target sets, reps, and weight guidance in the day logger."}</P>
+                    </Div>
+                </Card>
+
+                <Card className="gap-3 rounded-[28px] border-0 bg-[#FFF1D6] px-5 py-5">
+                    <Badge variant="outline">Coach note</Badge>
+                    <P className="text-sm">Use specific names like &quot;Incline Dumbbell Press&quot; or &quot;Treadmill Tempo Run&quot; so logging later feels immediate and precise.</P>
+                </Card>
+
+                <Button onPress={handleSubmit(registerEx, onInvalid)} className="h-16 rounded-2xl">
+                    Add To Routine
                 </Button>
             </Div>
         </Screen>
     );
 }
 
+function HeroPill({ label, value }: { label: string; value: string }) {
+    return (
+        <Div className="flex-1 rounded-3xl bg-white/12 px-4 py-4">
+            <P className="text-xs text-white/80 uppercase">{label}</P>
+            <P className="mt-1 text-sm text-white">{value}</P>
+        </Div>
+    );
+}
+
+function StatusChip({ label, value, muted = false }: { label: string; value: string; muted?: boolean }) {
+    return (
+        <Div className={cn("min-w-24 rounded-[22px] px-4 py-3", muted ? "bg-muted" : "bg-primary/10")}>
+            <P className="text-muted-foreground text-xs uppercase">{label}</P>
+            <P className={cn("mt-1 text-sm", muted ? "text-muted-foreground" : "text-primary")}>{value}</P>
+        </Div>
+    );
+}
+
+function SectionTitle({ eyebrow, title, note }: { eyebrow: string; title: string; note: string }) {
+    return (
+        <Div className="gap-1">
+            <Badge variant="outline">{eyebrow}</Badge>
+            <H2 className="text-2xl">{title}</H2>
+            <P className="text-muted-foreground text-sm">{note}</P>
+        </Div>
+    );
+}
+
 function ErrorToast({ errorEntries }: { errorEntries: [string, any][] }) {
     return (
-        <Div className="dark w-[95%] self-center">
-            <Div className="row mb-2 gap-3">
-                <Div className="bg-destructive/40 rounded-full p-2">
-                    <AlertCircle size={20} color={"red"} />
+        <Div className="bg-background w-[95%] self-center rounded-3xl px-5 py-5">
+            <Row className="mb-3 gap-3">
+                <Div className="bg-destructive/10 rounded-full p-2">
+                    <AlertCircle size={20} color="red" />
                 </Div>
-                <P className="text-lg font-bold">Please check your inputs</P>
-            </Div>
+                <P>Please check your inputs</P>
+            </Row>
 
-            <Div className="ml-2 gap-2">
+            <Div className="gap-2">
                 {errorEntries.map(([field, error]) => (
-                    <Div key={field} className="row gap-2">
-                        <Div className="bg-destructive/70 size-1.5 rounded-full" />
-                        <P className="text-muted-foreground text-sm capitalize">
-                            <P className="font-semibold">{field}:</P> {error?.message?.toString()}
+                    <Row key={field} className="items-start gap-2">
+                        <Div className="bg-destructive mt-2 size-1.5 rounded-full" />
+                        <P className="text-muted-foreground flex-1 text-sm">
+                            <P className="text-foreground">{field}:</P> {error?.message?.toString()}
                         </P>
-                    </Div>
+                    </Row>
                 ))}
             </Div>
         </Div>
@@ -170,153 +274,151 @@ const ExerciseNameField = ({ control }: { control: any }) => (
         control={control}
         name="name"
         render={({ field: { onChange, value }, fieldState: { error } }) => (
-            <Div>
-                <Label>Exercise Name</Label>
-                <Input className={cn(error && "border-destructive border")} placeholder="e.g. Incline Bench Press" value={value} onChangeText={onChange} />
+            <Div className="gap-2">
+                <P className="text-sm">Exercise Name</P>
+                <Input className={cn("h-14 rounded-2xl text-base", error && "border-destructive")} placeholder="e.g. Incline Bench Press" value={value} onChangeText={onChange} />
             </Div>
         )}
     />
 );
 
 const Type = ({ control }: { control: any }) => (
-    <Div>
-        <Label>Movement Type</Label>
-        <Controller
-            name="type"
-            control={control}
-            render={({ field: { value, onChange }, fieldState: { error } }) => (
+    <Controller
+        name="type"
+        control={control}
+        render={({ field: { value, onChange }, fieldState: { error } }) => (
+            <Div className="gap-2">
+                <P className="text-sm">Movement Type</P>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     <Div className="row gap-2">
                         {["Push", "Pull", "Legs", "Cardio", "Core"].map((type) => {
                             const isSelected = value === type;
                             return (
-                                <Button key={type} onPress={() => onChange(type)} variant={isSelected ? "primary" : "outline"} className={cn("flex-1", error && !isSelected && "border-destructive border")} textClassName={cn(isSelected ? "text-white" : "text-muted-foreground")}>
+                                <Button
+                                    key={type}
+                                    onPress={() => onChange(type)}
+                                    variant={isSelected ? "secondary" : "outline"}
+                                    className={cn("rounded-2xl px-5", error && !isSelected && "border-destructive")}
+                                    textClassName={isSelected ? "text-foreground" : "text-muted-foreground"}>
                                     {type}
                                 </Button>
                             );
                         })}
                     </Div>
                 </ScrollView>
-            )}
-        />
-    </Div>
+            </Div>
+        )}
+    />
 );
 
 const Variant = ({ control }: { control: any }) => (
-    <Div className="flex-1">
-        <Label>Variant</Label>
-        <Controller
-            name="variant"
-            control={control}
-            render={({ field: { value, onChange }, fieldState: { error } }) => (
-                <Div className="row flex-wrap justify-evenly gap-2">
+    <Controller
+        name="variant"
+        control={control}
+        render={({ field: { value, onChange }, fieldState: { error } }) => (
+            <Div className="gap-2">
+                <P className="text-sm">Variant</P>
+                <Div className="row flex-wrap gap-2">
                     {["Upper", "Lower", "Endurance"].map((type) => (
-                        <Button className={cn(error && "border-destructive border", "flex-1 px-0")} key={type} variant={value === type ? "primary" : "outline"} textClassName={cn(value === type ? "text-white" : "text-muted-foreground")} onPress={() => onChange(type)}>
+                        <Button
+                            className={cn(error && "border-destructive", "rounded-2xl px-5")}
+                            key={type}
+                            variant={value === type ? "secondary" : "outline"}
+                            textClassName={value === type ? "text-foreground" : "text-muted-foreground"}
+                            onPress={() => onChange(type)}>
                             {type}
                         </Button>
                     ))}
                 </Div>
-            )}
-        />
-    </Div>
+            </Div>
+        )}
+    />
 );
 
 const DayAssignment = ({ control }: { control: any }) => (
-    <Div className="flex-1">
-        <Label>Perform on:</Label>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <Row className="gap-2">
-                <Controller
-                    name="workoutDays"
-                    control={control}
-                    defaultValue={[]}
-                    render={({ field: { value = [], onChange }, fieldState: { error } }) => (
-                        <Div className="flex-1">
-                            <Div className="row gap-2">
-                                {weekdays.map((day) => {
-                                    const isSelected = value.includes(day);
-                                    return (
-                                        <Button
-                                            key={day}
-                                            variant={isSelected ? "primary" : "outline"}
-                                            className={cn(error && "border-destructive border", "flex-1")}
-                                            textClassName={isSelected ? "text-background" : "text-muted-foreground"}
-                                            onPress={() => {
-                                                const next = isSelected ? value.filter((d: string) => d !== day) : [...value, day];
-                                                onChange(next);
-                                            }}>
-                                            {day}
-                                        </Button>
-                                    );
-                                })}
-                            </Div>
-                        </Div>
-                    )}
-                />
-            </Row>
-        </ScrollView>
-    </Div>
-);
-
-function Duration({ control, isCardio }: { control: any; isCardio: boolean }) {
-    if (isCardio)
-        return (
-            <Div className="flex-1">
-                <Controller
-                    control={control}
-                    name="duration"
-                    render={({ field, fieldState: { error } }) => (
-                        <Div className="flex-1">
-                            <Label className="text-background">Duration (min)</Label>
-                            <Input className={cn(error && "border-destructive border")} keyboardType="numeric" onChangeText={(t) => field.onChange(toOptionalNumber(t))} />
-                        </Div>
-                    )}
-                />
-            </Div>
-        );
-}
-
-function SetsAndReps({ control, isCardio }: { control: any; isCardio: boolean }) {
-    if (!isCardio)
-        return (
-            <Div className="flex-1">
-                <Div className="row flex-1 gap-4">
-                    <Controller
-                        control={control}
-                        name="sets"
-                        render={({ field, fieldState: { error } }) => (
-                            <Div className="flex-1">
-                                <Label className="text-background">Sets</Label>
-                                <Input className={cn(error && "border-destructive border")} keyboardType="numeric" onChangeText={(t) => field.onChange(toOptionalNumber(t))} />
-                            </Div>
-                        )}
-                    />
-                    <Controller
-                        control={control}
-                        name="reps"
-                        render={({ field, fieldState: { error } }) => (
-                            <Div className="flex-1">
-                                <Label className="text-background">Reps</Label>
-                                <Input className={cn(error && "border-destructive border")} keyboardType="numeric" onChangeText={(t) => field.onChange(toOptionalNumber(t))} />
-                            </Div>
-                        )}
-                    />
+    <Controller
+        name="workoutDays"
+        control={control}
+        defaultValue={[]}
+        render={({ field: { value = [], onChange }, fieldState: { error } }) => (
+            <Div className="gap-2">
+                <P className="text-sm">Assign Days</P>
+                <Div className="row flex-wrap gap-2">
+                    {weekdays.map((day) => {
+                        const isSelected = value.includes(day);
+                        return (
+                            <Button
+                                key={day}
+                                variant={isSelected ? "secondary" : "outline"}
+                                className={cn(error && "border-destructive", "rounded-2xl px-4")}
+                                textClassName={isSelected ? "text-foreground" : "text-muted-foreground"}
+                                onPress={() => {
+                                    const next = isSelected ? value.filter((d: string) => d !== day) : [...value, day];
+                                    onChange(next);
+                                }}>
+                                {day}
+                            </Button>
+                        );
+                    })}
                 </Div>
             </Div>
-        );
+        )}
+    />
+);
+
+function Duration({ control }: { control: any }) {
+    return (
+        <Controller
+            control={control}
+            name="duration"
+            render={({ field, fieldState: { error } }) => (
+                <Div className="gap-2">
+                    <P className="text-sm">Duration (min)</P>
+                    <Input className={cn("h-14 rounded-2xl text-base", error && "border-destructive")} keyboardType="numeric" onChangeText={(t) => field.onChange(toOptionalNumber(t))} />
+                </Div>
+            )}
+        />
+    );
+}
+
+function SetsAndReps({ control }: { control: any }) {
+    return (
+        <Row className="gap-3">
+            <Controller
+                control={control}
+                name="sets"
+                render={({ field, fieldState: { error } }) => (
+                    <Div className="flex-1 gap-2">
+                        <P className="text-sm">Sets</P>
+                        <Input className={cn("h-14 rounded-2xl text-base", error && "border-destructive")} keyboardType="numeric" onChangeText={(t) => field.onChange(toOptionalNumber(t))} />
+                    </Div>
+                )}
+            />
+            <Controller
+                control={control}
+                name="reps"
+                render={({ field, fieldState: { error } }) => (
+                    <Div className="flex-1 gap-2">
+                        <P className="text-sm">Reps</P>
+                        <Input className={cn("h-14 rounded-2xl text-base", error && "border-destructive")} keyboardType="numeric" onChangeText={(t) => field.onChange(toOptionalNumber(t))} />
+                    </Div>
+                )}
+            />
+        </Row>
+    );
 }
 
 const UnitField = ({ control, isCardio, unit }: { control: any; isCardio: boolean; unit: string }) => (
-    <Div className="flex-1 flex-row items-end gap-2">
+    <Div className="gap-3">
         <Controller
             control={control}
             name={isCardio ? "distance" : "weight"}
             render={({ field, fieldState: { error } }) => (
-                <Div className="flex-1">
-                    <Label className="text-background">
+                <Div className="gap-2">
+                    <P className="text-sm">
                         {isCardio ? "Distance" : "Weight"} ({unit || (isCardio ? "km" : "kg")})
-                    </Label>
-                    <Input className={cn(error && "border-destructive border")} keyboardType="numeric" onChangeText={(t) => field.onChange(toOptionalNumber(t))} />
+                    </P>
+                    <Input className={cn("h-14 rounded-2xl text-base", error && "border-destructive")} keyboardType="numeric" onChangeText={(t) => field.onChange(toOptionalNumber(t))} />
                 </Div>
             )}
         />
@@ -325,9 +427,14 @@ const UnitField = ({ control, isCardio, unit }: { control: any; isCardio: boolea
             name="unit"
             render={({ field: { value, onChange }, fieldState: { error } }) => (
                 <Div className="row gap-2">
-                    {(isCardio ? ["km", "mi"] : ["kg", "lb"]).map((unit) => (
-                        <Button variant={value === unit ? "primary" : "outline"} textClassName="text-background" onPress={() => onChange(unit)} className={cn(error && "border-destructive border", "w-22")} key={unit}>
-                            {unit}
+                    {(isCardio ? ["km", "mi"] : ["kg", "lb"]).map((nextUnit) => (
+                        <Button
+                            variant={value === nextUnit ? "secondary" : "outline"}
+                            onPress={() => onChange(nextUnit)}
+                            className={cn(error && "border-destructive", "rounded-2xl px-5")}
+                            key={nextUnit}
+                            textClassName={value === nextUnit ? "text-foreground" : "text-muted-foreground"}>
+                            {nextUnit}
                         </Button>
                     ))}
                 </Div>

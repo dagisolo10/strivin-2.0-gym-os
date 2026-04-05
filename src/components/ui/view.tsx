@@ -16,17 +16,17 @@ interface TypographyProps extends TextProps {
     className?: string;
 }
 
-export const Screen = ({ className, children, scrollable = true, ...props }: ThemedViewProps & { scrollable?: boolean }) => (
+export const Screen = ({ className, children, nonScrollable = false, ...props }: ThemedViewProps & { nonScrollable?: boolean }) => (
     <SafeAreaView className="bg-dead-zone flex-1">
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1">
-            {scrollable ? (
-                <ScrollView className={cn("bg-background")} contentContainerStyle={{ flexGrow: 1 }} {...props}>
-                    <Div className={cn("flex-1", className)}>{children}</Div>
-                </ScrollView>
-            ) : (
+            {nonScrollable ? (
                 <Div className={cn("bg-background flex-1", className)} {...props}>
                     {children}
                 </Div>
+            ) : (
+                <ScrollView className={cn("bg-background")} contentContainerStyle={{ flexGrow: 1 }} {...props}>
+                    <Div className={cn("flex-1", className)}>{children}</Div>
+                </ScrollView>
             )}
         </KeyboardAvoidingView>
     </SafeAreaView>
@@ -45,7 +45,7 @@ export const H2 = ({ className, ...props }: TypographyProps) => <Text className=
 export const H3 = ({ className, ...props }: TypographyProps) => <Text className={cn("text-foreground text-2xl font-semibold", className)} {...props} />;
 export const P = ({ className, ...props }: TypographyProps) => <Text className={cn("text-foreground text-base font-semibold", className)} {...props} />;
 export const Lead = ({ className, ...props }: TypographyProps) => <Text className={cn("text-muted-foreground text-lg font-semibold", className)} {...props} />;
-export const Label = ({ className, ...props }: TypographyProps) => <Text className={cn("text-muted-foreground my-1.5 ml-1 font-bold", className)} {...props} />;
+export const Label = ({ className, ...props }: TypographyProps) => <Text className={cn("text-muted-foreground my-1.5 font-bold", className)} {...props} />;
 
 const badgeVariants = cva("inline-flex flex-row items-center justify-center rounded-full px-2.5 py-0.5 border", {
     variants: {
