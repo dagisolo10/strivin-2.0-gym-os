@@ -3,12 +3,12 @@ import { calculateStreak } from "@/server/workout";
 import type { UserWithRelations } from "@/types/model";
 import { getWeekdayName } from "@/lib/helper-functions";
 
-export function useWorkoutSession(user: UserWithRelations | null, selectedPlanId: number | null) {
+export function useWorkoutSession(user: UserWithRelations | null, selectedPlanId: string | null) {
     return useMemo(() => {
         if (!user) return null;
 
         const plans = user.plans;
-        const plan = plans.find((plan) => plan.id === selectedPlanId) ?? plans[0];
+        const plan = plans.find((plan) => plan.localId === selectedPlanId) ?? plans[0];
         if (!plan) return null;
 
         const today = getWeekdayName();

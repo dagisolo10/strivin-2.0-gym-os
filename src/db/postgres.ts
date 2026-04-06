@@ -2,15 +2,15 @@ import { relations } from "drizzle-orm";
 import { boolean, pgTable, real, serial, text, integer, timestamp } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
-    id: serial("id").primaryKey(),
+    id: text("id").primaryKey(),
     name: text("name").notNull(),
     profile: text("profile"),
     createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const workoutPlans = pgTable("workout_plans", {
-    id: serial("id").primaryKey(),
-    userId: integer("user_id")
+    id: text("id").primaryKey(),
+    userId: text("user_id")
         .references(() => users.id, { onDelete: "cascade" })
         .notNull(),
     workoutDaysPerWeek: integer("days_per_week").notNull(),
@@ -20,8 +20,8 @@ export const workoutPlans = pgTable("workout_plans", {
 });
 
 export const workoutDays = pgTable("workout_days", {
-    id: serial("id").primaryKey(),
-    planId: integer("plan_id")
+    id: text("id").primaryKey(),
+    planId: text("plan_id")
         .references(() => workoutPlans.id, { onDelete: "cascade" })
         .notNull(),
     dayName: text("day_name").notNull(),
@@ -29,8 +29,8 @@ export const workoutDays = pgTable("workout_days", {
 });
 
 export const exercises = pgTable("exercises", {
-    id: serial("id").primaryKey(),
-    workoutDay: integer("workout_day_id")
+    id: text("id").primaryKey(),
+    workoutDay: text("workout_day_id")
         .references(() => workoutDays.id, { onDelete: "cascade" })
         .notNull(),
     name: text("name").notNull(),
@@ -48,8 +48,8 @@ export const exercises = pgTable("exercises", {
 });
 
 export const workoutSessions = pgTable("workout_sessions", {
-    id: serial("id").primaryKey(),
-    userId: integer("user_id")
+    id: text("id").primaryKey(),
+    userId: text("user_id")
         .references(() => users.id, { onDelete: "cascade" })
         .notNull(),
     date: timestamp("date").defaultNow().notNull(),
@@ -57,11 +57,11 @@ export const workoutSessions = pgTable("workout_sessions", {
 });
 
 export const exerciseLogs = pgTable("exercise_logs", {
-    id: serial("id").primaryKey(),
-    sessionId: integer("session_id")
+    id: text("id").primaryKey(),
+    sessionId: text("session_id")
         .references(() => workoutSessions.id, { onDelete: "cascade" })
         .notNull(),
-    exerciseId: integer("exercise_id")
+    exerciseId: text("exercise_id")
         .references(() => exercises.id, { onDelete: "cascade" })
         .notNull(),
 

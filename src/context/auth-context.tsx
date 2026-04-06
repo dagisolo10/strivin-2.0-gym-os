@@ -2,10 +2,11 @@ import { useDrizzle } from "./db-provider";
 
 import { eq } from "drizzle-orm";
 import * as schema from "@/db/sqlite";
+import { randomUUID } from "expo-crypto";
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
 interface User {
-    id: number;
+    localId: string;
     name: string;
     profile: string | null;
     createdAt: string | null;
@@ -49,13 +50,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (existingUsers.length > 0) {
             // Update existing user
-            const [updated] = await db.update(schema.users).set({ name, profile }).where(eq(schema.users.id, existingUsers[0].id)).returning();
+            const [updated] = await db.update(schema.users).set({ name, profile }).where(eq(schema.users.localId, existingUsers[0].localId)).returning();
             setUser(updated);
             return updated;
         }
 
         // Create new user
-        const [newUser] = await db.insert(schema.users).values({ name, profile }).returning();
+        const [newUser] = await db.insert(schema.users).values({ name, profile, serverId: randomUUID(), localId: randomUUID() }).returning();
         setUser(newUser);
         return newUser;
     };
@@ -68,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const updateUser = async (updates: Partial<User>) => {
         if (!user) return;
-        const [updated] = await db.update(schema.users).set(updates).where(eq(schema.users.id, user.id)).returning();
+        const [updated] = await db.update(schema.users).set(updates).where(eq(schema.users.localId, user.localId)).returning();
         setUser(updated);
     };
 

@@ -17,9 +17,9 @@ export const DAY_ORDER: Record<Weekday, number> = { Monday: 0, Tuesday: 1, Wedne
 export const DISTANCE_UNITS: Extract<Unit, "km" | "mi">[] = ["km", "mi"];
 export const WEIGHT_UNITS: Extract<Unit, "kg" | "lb">[] = ["kg", "lb"];
 
-export const TYPES: ExerciseType[] = ["Push", "Pull", "Legs", "Core", "Cardio"];
-export const VARIANTS: ExerciseVariant[] = ["Upper", "Lower", "Endurance", "Full Body"];
-export const WORKOUT_SPLIT: WorkoutSplit[] = ["Push Pull Leg", "Upper Lower", "Full Body", "Endurance"];
+export const TYPES = ["Push", "Pull", "Legs", "Core", "Cardio"] as const satisfies readonly ExerciseType[];
+export const VARIANTS = ["Upper", "Lower", "Endurance", "Full Body"] as const satisfies readonly ExerciseVariant[];
+export const WORKOUT_SPLIT = ["Push Pull Leg", "Upper Lower", "Full Body", "Endurance"] as const satisfies readonly WorkoutSplit[];
 
 export const GOALS: { label: Goal; icon: string; note: string }[] = [
     { label: "Hypertrophy", icon: "flash-outline", note: "Build size with steady progressive overload." },

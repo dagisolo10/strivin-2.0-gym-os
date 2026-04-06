@@ -16,13 +16,13 @@ export default function ProgressScreen() {
 
     const sessions = user?.sessions ?? [];
     const plans = useMemo(() => user?.plans ?? [], [user?.plans]);
-    const planIds = plans.map((plan) => plan.id).join("|");
+    const planIds = plans.map((plan) => plan.localId).join("|");
 
     useEffect(() => {
-        syncSelectedPlan(plans.map((plan) => plan.id));
+        syncSelectedPlan(plans.map((plan) => plan.localId));
     }, [planIds, plans, syncSelectedPlan]);
 
-    const activePlan = plans.find((plan) => plan.id === selectedPlanId) ?? plans[0];
+    const activePlan = plans.find((plan) => plan.localId === selectedPlanId) ?? plans[0];
     const plannedExerciseCount = activePlan?.days.reduce((sum, day) => sum + day.exercises.length, 0) ?? 0;
     const streak = calculateStreak(sessions);
     const totalVolume = sessions.reduce((sum, session) => sum + session.logs.reduce((sessionSum, log) => sessionSum + (log.weight ?? 0) * (log.reps ?? 0), 0), 0);
@@ -42,7 +42,7 @@ export default function ProgressScreen() {
         <Screen nonScrollable>
             <FlatList
                 data={sessions.slice(0, 12)}
-                keyExtractor={(item) => String(item.id)}
+                keyExtractor={(item) => String(item.localId)}
                 showsVerticalScrollIndicator={false}
                 contentContainerClassName="gap-3 pb-24"
                 ListHeaderComponent={
@@ -73,7 +73,7 @@ export default function ProgressScreen() {
                             </Card>
                         </Div>
 
-                        <PlanCarousel plans={plans} selectedPlanId={activePlan?.id ?? null} onSelect={setSelectedPlanId} title="Focus Plan" subtitle="Use the carousel to inspect the routine you want to optimize next." />
+                        <PlanCarousel plans={plans} selectedPlanId={activePlan?.localId ?? null} onSelect={setSelectedPlanId} title="Focus Plan" subtitle="Use the carousel to inspect the routine you want to optimize next." />
 
                         <Row className="gap-3">
                             <StatCard label="Perfect days" value={`${perfectDays}`} suffix="total" />
@@ -94,27 +94,29 @@ export default function ProgressScreen() {
                             </Div>
                         </Card>
 
-                        <Card className="gap-4">
-                            <Row className="items-start">
-                                <Div className="flex-1 gap-1">
-                                    <P className="text-muted-foreground text-sm">Selected plan</P>
-                                    <H2 className="text-2xl">{activePlan.split}</H2>
-                                    <P className="text-muted-foreground text-sm">{activePlan.goal ?? "General fitness"}</P>
-                                </Div>
-                                <Badge variant="outline">{activePlan.workoutDaysPerWeek} days</Badge>
-                            </Row>
-                            <Row className="gap-3">
-                                <StatCard label="Planned moves" value={`${plannedExerciseCount}`} suffix="scheduled" />
-                                <StatCard label="Fitness level" value={activePlan.fitnessLevel ?? "Beginner"} suffix="current" />
-                            </Row>
-                        </Card>
+                        {activePlan && (
+                            <Card className="gap-4">
+                                <Row className="items-start">
+                                    <Div className="flex-1 gap-1">
+                                        <P className="text-muted-foreground text-sm">Selected plan</P>
+                                        <H2 className="text-2xl">{activePlan.split}</H2>
+                                        <P className="text-muted-foreground text-sm">{activePlan.goal ?? "General fitness"}</P>
+                                    </Div>
+                                    <Badge variant="outline">{activePlan.workoutDaysPerWeek} days</Badge>
+                                </Row>
+                                <Row className="gap-3">
+                                    <StatCard label="Planned moves" value={`${plannedExerciseCount}`} suffix="scheduled" />
+                                    <StatCard label="Fitness level" value={activePlan.fitnessLevel ?? "Beginner"} suffix="current" />
+                                </Row>
+                            </Card>
+                        )}
 
                         <Row className="items-center">
                             <H3>Recent Sessions</H3>
                             <Badge variant="secondary">{sessions.length}</Badge>
                         </Row>
 
-                        {sessions.length !== 0 && (
+                        {sessions.length === 0 && (
                             <Card variant={"muted"}>
                                 <P className="text-muted-foreground">Log your first workout from the home screen and your history will show up here.</P>
                             </Card>
@@ -132,7 +134,7 @@ export default function ProgressScreen() {
                         </Row>
 
                         {session.logs.slice(0, 4).map((log) => (
-                            <Card key={log.id} variant={"muted"} className="row items-start justify-between gap-3">
+                            <Card key={log.localId} variant={"muted"} className="row items-start justify-between gap-3">
                                 <P className="text-sm">{log.exercise?.name}</P>
                                 <P className="text-muted-foreground text-sm">
                                     {log.reps ?? log.duration ?? 0}

@@ -52,7 +52,7 @@ export function calculateStreak(sessions: { date: string; perfectDay: boolean | 
     };
 }
 
-export async function logExerciseSet(data: { userId: number; exerciseId: number; reps?: number; weight?: number; duration?: number; distance?: number }) {
+export async function logExerciseSet(data: { userId: string; exerciseId: string; reps?: number; weight?: number; duration?: number; distance?: number }) {
     const dateKey = getDateKey();
     const { userId, exerciseId, reps, weight, duration, distance } = data;
 
@@ -69,7 +69,7 @@ export async function logExerciseSet(data: { userId: number; exerciseId: number;
         // Create the exercise log
         store.createLog({
             userId,
-            sessionId: session.id,
+            sessionId: session.localId,
             exerciseId,
             reps: reps ?? null,
             weight: weight ?? null,
@@ -93,7 +93,7 @@ export async function logExerciseSet(data: { userId: number; exerciseId: number;
 
 export async function resetLocalUserData() {
     const store = useStaticStore.getState();
-    const localUser = store.users.find((u) => u.id === store.currentUserId);
+    const localUser = store.users.find((u) => u.localId === store.currentUserId);
 
     if (!localUser) return;
 
@@ -101,12 +101,12 @@ export async function resetLocalUserData() {
     store.resetToInitial();
 }
 
-export async function getRecentLogsForExercise(userId: number, exerciseId: number) {
+export async function getRecentLogsForExercise(userId: string, exerciseId: string) {
     const store = useStaticStore.getState();
     return store.getLogsForExercise(exerciseId, 6);
 }
 
 export async function getUser() {
     const store = useStaticStore.getState();
-    return store.getUserWithRelations(store.currentUserId || 1);
+    return store.getUserWithRelations(store.currentUserId || "user-1");
 }

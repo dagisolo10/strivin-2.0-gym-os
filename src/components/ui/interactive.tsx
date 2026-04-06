@@ -73,7 +73,7 @@ const navLinkTextVariants = {
     link: "text-accent underline",
 };
 
-export const NavLink = ({ href, variant = "link", size = "default", children, className, textClassName, onPress, component = false, ...props }: ButtonProps & { href: LinkProps["href"]; component?: boolean }) => {
+export const NavLink = ({ href, variant = "link", size = "sm", children, className, textClassName, onPress, component = false, ...props }: ButtonProps & { href: LinkProps["href"]; component?: boolean }) => {
     const handlePress = (e: GestureResponderEvent) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         onPress?.(e);

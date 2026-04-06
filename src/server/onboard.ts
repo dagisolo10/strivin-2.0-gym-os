@@ -37,7 +37,7 @@ export async function registerUser(data: OnboardingState) {
     });
 
     // Create workout days
-    const dayRecords = data.workoutDays.map((day) => store.createWorkoutDay({ userId: user.id, planId: plan.id, dayName: day }));
+    const dayRecords = data.workoutDays.map((day) => store.createWorkoutDay({ userId: user.localId, planId: plan.localId, dayName: day }));
 
     // Create exercises
     if (data.exercises && data.exercises.length > 0 && dayRecords.length > 0) {
@@ -54,9 +54,9 @@ export async function registerUser(data: OnboardingState) {
                     }
 
                     return {
-                        userId: user.id,
-                        planId: plan.id,
-                        workoutDayId: dayRecord.id,
+                        userId: user.localId,
+                        planId: plan.localId,
+                        workoutDayId: dayRecord.localId,
                         name: exercise.name,
                         sets: exercise.sets ?? null,
                         reps: exercise.reps ?? null,
@@ -79,11 +79,11 @@ export async function registerUser(data: OnboardingState) {
     }
 
     store.createSession({
-        userId: user.id,
+        userId: user.localId,
         date: new Date().toISOString().split("T")[0],
         sessionLength: data.sessionLength ?? null,
         perfectDay: false,
     });
 
-    return { success: true, userId: user.id };
+    return { success: true, userId: user.localId };
 }

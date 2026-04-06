@@ -10,6 +10,7 @@ declare global {
     }
 
     type DB = ExpoSQLiteDatabase<typeof schema>;
+    type SyncStatus = "pending" | "synced" | "failed";
 
     type Weekday = (typeof weekdays)[number];
 

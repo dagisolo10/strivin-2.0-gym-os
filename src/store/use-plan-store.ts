@@ -1,9 +1,9 @@
 import { create } from "zustand";
 
 interface PlanState {
-    selectedPlanId: number | null;
-    setSelectedPlanId: (planId: number) => void;
-    syncSelectedPlan: (planIds: number[]) => void;
+    selectedPlanId: string | null;
+    setSelectedPlanId: (planId: string) => void;
+    syncSelectedPlan: (planIds: string[]) => void;
     clearSelectedPlan: () => void;
 }
 

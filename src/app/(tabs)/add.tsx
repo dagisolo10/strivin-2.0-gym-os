@@ -29,7 +29,7 @@ export default function AddExerciseScreen() {
     const syncSelectedPlan = usePlanStore((state) => state.syncSelectedPlan);
 
     const plans = useMemo(() => user?.plans ?? [], [user?.plans]);
-    const planIds = useMemo(() => plans.map((plan) => plan.id).join("|"), [plans]);
+    const planIds = useMemo(() => plans.map((plan) => plan.localId).join("|"), [plans]);
 
     const { control, handleSubmit, watch, resetField, setValue, getValues } = useForm<AddExerciseValues>({
         resolver: zodResolver(exerciseSchema),
@@ -59,7 +59,7 @@ export default function AddExerciseScreen() {
     }, [getValues, isCardio, resetField, selectedType, setValue]);
 
     useEffect(() => {
-        syncSelectedPlan(plans.map((plan) => plan.id));
+        syncSelectedPlan(plans.map((plan) => plan.localId));
     }, [planIds, plans, syncSelectedPlan]);
 
     if (isLoading) {
@@ -78,7 +78,7 @@ export default function AddExerciseScreen() {
         );
     }
 
-    const plan = plans.find((item) => item.id === selectedPlanId) ?? plans[0];
+    const plan = plans.find((item) => item.localId === selectedPlanId) ?? plans[0];
     if (!plan) {
         return (
             <Screen className="items-center justify-center px-6">
@@ -96,8 +96,8 @@ export default function AddExerciseScreen() {
         const { workoutDays, ...exercises } = data;
 
         const payload = {
-            userId: user?.id ?? 0,
-            planId: plan.id,
+            userId: user?.localId ?? "user-1",
+            planId: plan.localId,
             exercise: exercises as any,
             workoutDays: workoutDays as Weekday[],
         };
@@ -120,6 +120,8 @@ export default function AddExerciseScreen() {
             console.error(error);
         }
     }
+
+    const hasSelectedType = Boolean(selectedType);
 
     return (
         <Screen className="gap-6 pb-36">
@@ -149,7 +151,7 @@ export default function AddExerciseScreen() {
                 </Row>
             </Card>
 
-            <PlanCarousel plans={plans} selectedPlanId={plan.id} onSelect={setSelectedPlanId} title="Destination Plan" subtitle="Pick the plan that should receive this movement before you save it." />
+            <PlanCarousel plans={plans} selectedPlanId={plan.localId} onSelect={setSelectedPlanId} title="Destination Plan" subtitle="Pick the plan that should receive this movement before you save it." />
 
             <Card className="gap-5">
                 <Row className="items-start gap-3">
@@ -167,12 +169,15 @@ export default function AddExerciseScreen() {
 
             <Card className="gap-4">
                 <Row>
-                    <SectionTitle eyebrow="Metrics" title="Define the training target" note={isCardio ? "Use time and distance for conditioning work." : "Use sets, reps, and weight for strength work."} />
-                    <Badge variant={isCardio ? "secondary" : "primary"}>{isCardio ? "Endurance" : "Strength"}</Badge>
+                    <SectionTitle
+                        eyebrow="Metrics"
+                        title="Define the training target"
+                        note={!hasSelectedType ? "Choose a type first to unlock the right workload fields." : isCardio ? "Use time and distance for conditioning work." : "Use sets, reps, and weight for strength work."}
+                    />
+                    <Badge variant={!hasSelectedType ? "outline" : isCardio ? "secondary" : "primary"}>+ {!hasSelectedType ? "Choose type" : isCardio ? "Endurance" : "Strength"}+ </Badge>
                 </Row>
-
-                {isCardio ? <DurationField control={control} /> : <SetsAndRepsFields control={control} />}
-                <UnitAndValueField control={control} isCardio={isCardio} />
+                {hasSelectedType ? isCardio ? <DurationField control={control} /> : <SetsAndRepsFields control={control} /> : null}
+                {hasSelectedType ? <UnitAndValueField control={control} isCardio={isCardio} /> : null}
             </Card>
 
             <Card variant="muted">

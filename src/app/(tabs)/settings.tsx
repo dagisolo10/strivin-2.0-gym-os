@@ -18,12 +18,12 @@ export default function Settings() {
     const resetStore = useStaticStore((state) => state.resetToInitial);
 
     const plans = useMemo(() => user?.plans ?? [], [user?.plans]);
-    const planIds = plans.map((plan) => plan.id).join("|");
+    const planIds = plans.map((plan) => plan.localId).join("|");
     useEffect(() => {
-        syncSelectedPlan(plans.map((plan) => plan.id));
+        syncSelectedPlan(plans.map((plan) => plan.localId));
     }, [planIds, plans, syncSelectedPlan]);
 
-    const activePlan = plans.find((plan) => plan.id === selectedPlanId) ?? plans[0];
+    const activePlan = plans.find((plan) => plan.localId === selectedPlanId) ?? plans[0];
     const streak = calculateStreak(user?.sessions ?? []);
 
     return (
@@ -39,15 +39,14 @@ export default function Settings() {
                     <Row className="items-end gap-4">
                         <Image className="size-14 rounded-full" source={user?.profile ? { uri: user.profile } : require("../../../assets/images/profile.jpg")} />
                         <Div className="justify-start">
-                            <H3>Malcom</H3>
-                            <P className="text-muted-foreground text-sm">Malcom@gmail.com</P>
+                            <H3>{user?.name}</H3>
                         </Div>
                     </Row>
                     <P className="text-muted-foreground text-sm">Current streak: {streak.current} days</P>
                 </Row>
             </Card>
 
-            <PlanCarousel plans={plans} selectedPlanId={activePlan?.id ?? null} onSelect={setSelectedPlanId} title="Plan library" subtitle="Keep an eye on which plan is active before you edit or add new movements." />
+            <PlanCarousel plans={plans} selectedPlanId={activePlan?.localId ?? null} onSelect={setSelectedPlanId} title="Plan library" subtitle="Keep an eye on which plan is active before you edit or add new movements." />
 
             <Card className="gap-2">
                 <P className="text-muted-foreground text-sm uppercase">Plan</P>

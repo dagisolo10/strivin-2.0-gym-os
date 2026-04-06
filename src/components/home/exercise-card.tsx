@@ -9,16 +9,16 @@ import { calculateSuggestedLoad, logExerciseSet } from "@/server/workout";
 import { Badge, Card, Div, Field, H3, P, Row } from "@/components/ui/display";
 
 interface CardProp {
-    logs: { id: number; exerciseId: number; reps: number | null; weight: number | null; duration: number | null; distance: number | null; completed: boolean; date: string }[];
-    userId: number;
+    logs: { id: string; exerciseId: string; reps: number | null; weight: number | null; duration: number | null; distance: number | null; completed: boolean; date: string }[];
+    userId: string;
     onPress: () => void;
-    expandedId: number | null;
+    expandedId: string | null;
     exercise: ExerciseWithLogs;
     selectedDayName: Weekday;
 }
 
 export default function ExerciseCard({ userId, exercise, logs, onPress, expandedId, selectedDayName }: CardProp) {
-    const isExpanded = expandedId === exercise.id;
+    const isExpanded = expandedId === exercise.localId;
     const isReadOnly = selectedDayName !== getWeekdayName();
 
     const [isLogging, setIsLogging] = useState(false);
@@ -29,7 +29,7 @@ export default function ExerciseCard({ userId, exercise, logs, onPress, expanded
     useEffect(() => {
         setWeight(exercise.weight?.toString() || "");
         setReps(exercise.reps?.toString() || "");
-    }, [exercise.id, exercise.weight, exercise.reps]);
+    }, [exercise.localId, exercise.weight, exercise.reps]);
 
     const completedSets = logs.length;
     const targetSets = exercise.sets ?? 1;
@@ -58,7 +58,7 @@ export default function ExerciseCard({ userId, exercise, logs, onPress, expanded
         };
 
         try {
-            await logExerciseSet({ userId, exerciseId: exercise.id, ...payload });
+            await logExerciseSet({ userId, exerciseId: exercise.localId, ...payload });
             toast.success("Set logged!");
         } catch (error: any) {
             console.error(error);

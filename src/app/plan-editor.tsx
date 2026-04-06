@@ -36,10 +36,10 @@ export default function PlanEditorScreen() {
     const plans = useMemo(() => user?.plans ?? [], [user?.plans]);
 
     useEffect(() => {
-        syncSelectedPlan(plans.map((plan) => plan.id));
+        syncSelectedPlan(plans.map((plan) => plan.localId));
     }, [plans, syncSelectedPlan]);
 
-    const activePlan = plans.find((plan) => plan.id === selectedPlanId) ?? plans[0];
+    const activePlan = plans.find((plan) => plan.localId === selectedPlanId) ?? plans[0];
 
     const methods = useForm<PlanEditorValues>({
         resolver: zodResolver(planEditorSchema),
@@ -92,8 +92,8 @@ export default function PlanEditorScreen() {
 
     const savePlan = async (values: PlanEditorValues, createNew = false) => {
         const request = saveWorkoutPlan({
-            userId: user.id,
-            planId: createNew ? undefined : activePlan?.id,
+            userId: user.localId,
+            planId: createNew ? undefined : activePlan?.localId,
             split: values.split as WorkoutSplit,
             workoutDays: values.workoutDays as Weekday[],
             goal: values.goal as Goal | undefined,
@@ -133,7 +133,7 @@ export default function PlanEditorScreen() {
                 </Row>
             </Card>
 
-            <PlanCarousel plans={plans} selectedPlanId={activePlan?.id ?? null} onSelect={setSelectedPlanId} title="Plan carousel" subtitle="Choose the plan you want to refine before making changes." />
+            <PlanCarousel plans={plans} selectedPlanId={activePlan?.localId ?? null} onSelect={setSelectedPlanId} title="Plan carousel" subtitle="Choose the plan you want to refine before making changes." />
 
             <Card className="gap-5">
                 <SectionTitle eyebrow="Structure" title="Plan identity" note="Set the split, goal, and cadence that define this cycle." />
@@ -277,7 +277,7 @@ export default function PlanEditorScreen() {
                                 text: "Delete",
                                 style: "destructive",
                                 onPress: async () => {
-                                    const result = await deleteWorkoutPlan(user.id, activePlan.id);
+                                    const result = await deleteWorkoutPlan(user.localId, activePlan.localId);
                                     if (!result.success) {
                                         toast.error("Could not delete plan");
                                         return;

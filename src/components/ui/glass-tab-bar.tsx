@@ -1,13 +1,13 @@
 import { useEffect } from "react";
 import { BlurView } from "expo-blur";
 import { impactAsync, ImpactFeedbackStyle } from "expo-haptics";
-import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { View, StyleSheet, Pressable, Dimensions } from "react-native";
+import { View, StyleSheet, Pressable, Dimensions, useWindowDimensions } from "react-native";
+import { BottomTabBarProps, BottomTabNavigationOptions } from "@react-navigation/bottom-tabs";
 import Animated, { useAnimatedStyle, withSpring, useSharedValue, withTiming } from "react-native-reanimated";
 
 const { width } = Dimensions.get("window");
-const TAB_BAR_WIDTH = width - 40;
+let TAB_BAR_WIDTH = width - 40;
 const TAB_HEIGHT = 66;
 
 const SPRING_CONFIG = {
@@ -18,6 +18,8 @@ const SPRING_CONFIG = {
 
 export function GlassTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
     const insets = useSafeAreaInsets();
+    const { width } = useWindowDimensions();
+    TAB_BAR_WIDTH = width - 40;
     const totalTabs = state.routes.length;
     const tabWidth = TAB_BAR_WIDTH / totalTabs;
     const translateX = useSharedValue(state.index * tabWidth);
@@ -53,7 +55,7 @@ interface TabItemProps {
     isFocused: boolean;
     onPress: () => void;
     onLongPress: () => void;
-    options: any;
+    options: BottomTabNavigationOptions;
     tabWidth: number;
 }
 
@@ -61,7 +63,7 @@ function TabItem({ isFocused, onPress, onLongPress, options, tabWidth }: TabItem
     const scale = useSharedValue(1);
     const animatedIconStyle = useAnimatedStyle(() => {
         return {
-            transform: [{ scale: withSpring(isFocused ? 1.15 : 1, SPRING_CONFIG) }, { translateY: withSpring(isFocused ? -2 : 0, SPRING_CONFIG) }],
+            transform: [{ scale: scale.value * (isFocused ? 1.15 : 1) }, { translateY: withSpring(isFocused ? -2 : 0, SPRING_CONFIG) }],
             opacity: withTiming(isFocused ? 1 : 0.6, { duration: 200 }),
         };
     });
@@ -71,7 +73,7 @@ function TabItem({ isFocused, onPress, onLongPress, options, tabWidth }: TabItem
 
     return (
         <Pressable onPress={onPress} onLongPress={onLongPress} onPressIn={handlePressIn} onPressOut={handlePressOut} style={{ width: tabWidth, height: TAB_HEIGHT, alignItems: "center", justifyContent: "center" }}>
-            <Animated.View style={animatedIconStyle}>{options.tabBarIcon ? options.tabBarIcon({ focused: isFocused }) : null}</Animated.View>
+            <Animated.View style={animatedIconStyle}>{options.tabBarIcon ? options.tabBarIcon({ focused: isFocused, color: "", size: 0 }) : null}</Animated.View>
         </Pressable>
     );
 }
