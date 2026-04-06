@@ -4,6 +4,6 @@
         "source.organizeImports": "explicit",
         "source.sortMembers": "explicit"
     },
-    "files.autoSaveDelay": 1000,
-    "files.autoSave": "off"
+    "files.autoSaveDelay": 3000
+    // "files.autoSave": "off"
 }

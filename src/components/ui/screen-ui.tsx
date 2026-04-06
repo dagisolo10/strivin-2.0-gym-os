@@ -1,5 +1,5 @@
-import { Button } from "./button";
-import { H2, Screen } from "./view";
+import { Button } from "./interactive";
+import { H2, P, Screen } from "./display";
 
 import { Link, LinkProps } from "expo-router";
 import { ActivityIndicator } from "react-native";
@@ -23,4 +23,9 @@ export function LoadingScreen() {
             <ActivityIndicator size="large" />
         </Screen>
     );
+}
+
+export function ErrorMessage({ message }: { message?: string }) {
+    if (!message) return null;
+    return <P className="text-destructive mt-2 text-sm">{message}</P>;
 }

@@ -1,4 +1,4 @@
-import { Badge, Card, Div, H1, P } from "../ui/view";
+import { Badge, Card, Div, H1, P } from "../ui/display";
 
 import { Ionicons } from "@expo/vector-icons";
 
@@ -10,7 +10,7 @@ export default function Finish() {
             </Div>
             <Badge variant="glass">Ready</Badge>
             <H1 className="text-center text-3xl text-white">Your plan is ready</H1>
-            <P className="max-w-70 text-center text-white/85">You’ve got a local-first setup, a structured routine, and the base screens ready for logging and progression.</P>
+            <P className="max-w-96 text-center text-white/85">You’ve got a local-first setup, a structured routine, and the base screens ready for logging and progression.</P>
         </Card>
     );
 }

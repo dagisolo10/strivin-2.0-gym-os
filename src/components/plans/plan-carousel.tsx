@@ -1,22 +1,27 @@
 import { cn } from "@/lib/utils";
-import * as schema from "@/db/sqlite";
 import { DAY_ORDER } from "@/constants/data";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/interactive";
 import { FlatList } from "react-native-gesture-handler";
-import { Badge, Card, Div, H3, P, Row } from "@/components/ui/view";
+import { Badge, Card, Div, H3, P, Row } from "@/components/ui/display";
 
-type PlanCard = typeof schema.workoutPlans.$inferSelect & {
-    days: (typeof schema.workoutDays.$inferSelect & {
-        exercises?: (typeof schema.exercises.$inferSelect)[];
-    })[];
-};
+export interface PlanCard {
+    localId: string;
+    split: WorkoutSplit;
+    goal: Goal | null;
+    fitnessLevel: FitnessLevel | null;
+    days: {
+        localId: string;
+        dayName: Weekday;
+        exercises?: { name: string }[];
+    }[];
+}
 
 interface PlanCarouselProps {
-    plans: PlanCard[];
-    selectedPlanId: number | null;
-    onSelect: (planId: number) => void;
     title?: string;
     subtitle?: string;
+    plans: PlanCard[];
+    selectedPlanId: string | null;
+    onSelect: (planId: string) => void;
 }
 
 export function PlanCarousel({ plans, selectedPlanId, onSelect, title, subtitle }: PlanCarouselProps) {
@@ -32,21 +37,21 @@ export function PlanCarousel({ plans, selectedPlanId, onSelect, title, subtitle 
             <FlatList
                 horizontal
                 data={plans}
-                keyExtractor={(item) => String(item.id)}
+                keyExtractor={(item) => String(item.localId)}
                 showsHorizontalScrollIndicator={false}
                 contentContainerClassName="gap-3 pr-2"
                 renderItem={({ item: plan }) => {
-                    const isSelected = plan.id === selectedPlanId;
+                    const isSelected = plan.localId === selectedPlanId;
                     const orderedDays = [...plan.days].sort((a, b) => DAY_ORDER[a.dayName] - DAY_ORDER[b.dayName]);
                     const totalExercises = orderedDays.reduce((sum, day) => sum + (day.exercises?.length ?? 0), 0);
 
                     return (
-                        <Button variant="ghost" className="h-auto p-0" onPress={() => onSelect(plan.id)} component>
-                            <Card className={cn("min-h-72 w-80 gap-4 rounded-[30px] border-0 px-5 py-5", isSelected ? "bg-primary" : "bg-muted")}>
+                        <Button variant="ghost" className="h-auto p-0" onPress={() => onSelect(plan.localId)} component>
+                            <Card variant={isSelected ? "primary" : "muted"} className={cn("min-h-72 w-80 gap-4")}>
                                 <Row className="items-start gap-3">
                                     <Div className="flex-1">
                                         <Row>
-                                            <P className={cn("text-xs uppercase", isSelected ? "text-white/70" : "text-muted-foreground")}>Plan {plan.id}</P>
+                                            <P className={cn("text-xs uppercase", isSelected ? "text-white/70" : "text-muted-foreground")}>Plan {plan.localId}</P>
                                             <Badge variant={isSelected ? "glass" : "outline"}>{orderedDays.length} days</Badge>
                                         </Row>
                                         <H3 className={cn(isSelected ? "text-white" : "text-foreground")}>{plan.split}</H3>
@@ -57,7 +62,7 @@ export function PlanCarousel({ plans, selectedPlanId, onSelect, title, subtitle 
                                 <Div className="items-start gap-2">
                                     <Row className="gap-2">
                                         {orderedDays.slice(0, 4).map((day) => (
-                                            <Div key={`${plan.id}-${day.id}`} className={cn("min-w-16 flex-1 items-center rounded-full px-4 py-2", isSelected ? "bg-white/12" : "bg-accent")}>
+                                            <Div key={`${plan.localId}-${day.localId}`} className={cn("min-w-16 flex-1 items-center rounded-full px-4 py-2", isSelected ? "bg-white/12" : "bg-accent")}>
                                                 <P className={cn("text-xs text-white")}>{day.dayName.slice(0, 3)}</P>
                                             </Div>
                                         ))}

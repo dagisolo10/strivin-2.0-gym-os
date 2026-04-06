@@ -1,8 +1,8 @@
 import { Image } from "react-native";
 import { icons } from "@/constants/icons";
 import { Link, LinkProps } from "expo-router";
-import { Button } from "@/components/ui/button";
-import { Badge, Card, Div, H1, P, Screen } from "@/components/ui/view";
+import { Button } from "@/components/ui/interactive";
+import { Badge, Card, Div, H1, P, Screen } from "@/components/ui/display";
 
 interface AuthShellProps {
     title: string;
@@ -18,7 +18,7 @@ export function AuthShell({ title, subtitle, footerLabel, footerHref, footerCta,
         <Screen className="px-5 py-6" nonScrollable={false}>
             <Div className="flex-1 justify-center gap-6">
                 <Div className="items-center gap-4">
-                    <Div className="bg-primary/12 border-primary/20 size-24 items-center justify-center rounded-[28px] border">
+                    <Div className="bg-primary/12 border-primary/20 size-24 items-center justify-center rounded-3xl border">
                         <Image source={icons.logo} resizeMode="contain" className="size-14" />
                     </Div>
                     <Badge variant="outline" className="bg-muted/60 rounded-full px-4 py-2">

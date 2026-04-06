@@ -1,6 +1,6 @@
 import { Image } from "react-native";
-import { Div, H2, P, Row } from "@/components/ui/view";
 import { formatDateLabel } from "@/lib/helper-functions";
+import { Div, H2, P, Row } from "@/components/ui/display";
 import { UserWithRelations } from "@/store/use-static-store";
 
 interface HeaderProp {

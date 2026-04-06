@@ -1,24 +1,24 @@
 import { cn } from "@/lib/utils";
 import { toast } from "react-native-sonner";
 import React, { useEffect, useState } from "react";
-import { Button, Input } from "@/components/ui/button";
 import { getWeekdayName } from "@/lib/helper-functions";
+import { Button, Input } from "@/components/ui/interactive";
 import { ExerciseWithLogs } from "@/store/use-static-store";
 import { ChevronDown, ChevronUp } from "lucide-react-native";
 import { calculateSuggestedLoad, logExerciseSet } from "@/server/workout";
-import { Badge, Card, Div, H3, Label, P, Row } from "@/components/ui/view";
+import { Badge, Card, Div, Field, H3, P, Row } from "@/components/ui/display";
 
 interface CardProp {
-    logs: { id: number; exerciseId: number; reps: number | null; weight: number | null; duration: number | null; distance: number | null; completed: boolean; date: string }[];
-    userId: number;
+    logs: { id: string; exerciseId: string; reps: number | null; weight: number | null; duration: number | null; distance: number | null; completed: boolean; date: string }[];
+    userId: string;
     onPress: () => void;
-    expandedId: number | null;
+    expandedId: string | null;
     exercise: ExerciseWithLogs;
     selectedDayName: Weekday;
 }
 
 export default function ExerciseCard({ userId, exercise, logs, onPress, expandedId, selectedDayName }: CardProp) {
-    const isExpanded = expandedId === exercise.id;
+    const isExpanded = expandedId === exercise.localId;
     const isReadOnly = selectedDayName !== getWeekdayName();
 
     const [isLogging, setIsLogging] = useState(false);
@@ -29,7 +29,7 @@ export default function ExerciseCard({ userId, exercise, logs, onPress, expanded
     useEffect(() => {
         setWeight(exercise.weight?.toString() || "");
         setReps(exercise.reps?.toString() || "");
-    }, [exercise.id, exercise.weight, exercise.reps]);
+    }, [exercise.localId, exercise.weight, exercise.reps]);
 
     const completedSets = logs.length;
     const targetSets = exercise.sets ?? 1;
@@ -58,7 +58,7 @@ export default function ExerciseCard({ userId, exercise, logs, onPress, expanded
         };
 
         try {
-            await logExerciseSet({ userId, exerciseId: exercise.id, ...payload });
+            await logExerciseSet({ userId, exerciseId: exercise.localId, ...payload });
             toast.success("Set logged!");
         } catch (error: any) {
             console.error(error);
@@ -81,7 +81,7 @@ export default function ExerciseCard({ userId, exercise, logs, onPress, expanded
     };
 
     return (
-        <Card className={cn("gap-0 rounded-[28px] border p-0", isExpanded && "border-primary/30 shadow-md")}>
+        <Card>
             <MainButton onPress={onPress} exercise={exercise} completed={completed} completedSets={completedSets} targetSets={targetSets} targetSummary={displayMetrics.summary} isExpanded={isExpanded} />
 
             {isExpanded && (
@@ -187,7 +187,7 @@ function MetricChips({ bestAverage, pacing, suggestedLoad, exercise }: Pick<SubC
 function InfoCards({ completedSets, targetSets, suggestedLoad, exercise }: Pick<SubComponentProps, "completedSets" | "targetSets" | "suggestedLoad" | "exercise">) {
     return (
         <Row className="items-start gap-3">
-            <Div className="bg-muted/50 flex-1 rounded-3xl px-4 py-4">
+            <Div className="bg-card flex-1 rounded-3xl px-4 py-4">
                 <P className="text-muted-foreground text-[10px] uppercase">Current set</P>
                 <H3 className="mt-1">
                     {Math.min(completedSets + 1, targetSets)} / {targetSets}
@@ -209,14 +209,12 @@ function Cardio({ exercise, weight, setWeight, reps, setReps, isReadOnly, type }
 
     return (
         <Row className="gap-3">
-            <Div className="flex-1">
-                <Label className="text-xs font-extrabold uppercase">Distance ({exercise.unit ?? "km"})</Label>
+            <Field label={`Distance (${exercise.unit ?? "km"})`} className="flex-1">
                 <Input className="h-14 rounded-2xl" keyboardType="decimal-pad" value={weight} onChangeText={setWeight} placeholder={exercise.distance?.toString() ?? "5"} editable={!isReadOnly} />
-            </Div>
-            <Div className="flex-1">
-                <Label className="text-xs font-extrabold uppercase">Duration (min)</Label>
+            </Field>
+            <Field label="Duration (min)" className="flex-1">
                 <Input className="h-14 rounded-2xl" keyboardType="number-pad" value={reps} onChangeText={setReps} placeholder={exercise.duration?.toString() ?? "30"} editable={!isReadOnly} />
-            </Div>
+            </Field>
         </Row>
     );
 }
@@ -226,14 +224,12 @@ function Weight({ exercise, weight, setWeight, reps, setReps, isReadOnly, type }
 
     return (
         <Row className="gap-3">
-            <Div className="flex-1">
-                <Label className="text-xs font-extrabold uppercase">Weight ({exercise.unit ?? "kg"})</Label>
+            <Field label={`Weight (${exercise.unit ?? "kg"})`} className="flex-1">
                 <Input className="h-14 rounded-2xl" keyboardType="decimal-pad" value={weight} onChangeText={setWeight} editable={!isReadOnly} />
-            </Div>
-            <Div className="flex-1">
-                <Label className="text-xs font-extrabold uppercase">Reps done</Label>
+            </Field>
+            <Field label="Reps done" className="flex-1">
                 <Input className="h-14 rounded-2xl" keyboardType="number-pad" value={reps} onChangeText={setReps} editable={!isReadOnly} />
-            </Div>
+            </Field>
         </Row>
     );
 }

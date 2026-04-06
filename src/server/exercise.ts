@@ -3,8 +3,8 @@ import { useStaticStore, Exercise } from "@/store/use-static-store";
 type NewExercise = Omit<Exercise, "id" | "userId" | "planId" | "workoutDayId">;
 
 interface Data {
-    userId: number;
-    planId: number;
+    userId: string;
+    planId: string;
     exercise: NewExercise;
     workoutDays: Weekday[];
 }
@@ -12,17 +12,17 @@ interface Data {
 export async function addExercise(data: Data) {
     try {
         const store = useStaticStore.getState();
-        const plan = store.plans.find((p) => p.id === data.planId);
+        const plan = store.plans.find((p) => p.localId === data.planId);
         if (!plan) return { success: false, error: "Plan not found" };
 
         for (const day of data.workoutDays) {
-            let workoutDay = store.workoutDays.find((d) => d.planId === plan.id && d.dayName === day);
+            let workoutDay = store.workoutDays.find((d) => d.planId === plan.localId && d.dayName === day);
 
             if (!workoutDay) {
                 workoutDay = store.createWorkoutDay({
                     userId: data.userId,
                     dayName: day,
-                    planId: plan.id,
+                    planId: plan.localId,
                 });
             }
 
@@ -30,7 +30,7 @@ export async function addExercise(data: Data) {
                 ...data.exercise,
                 userId: data.userId,
                 planId: data.planId,
-                workoutDayId: workoutDay.id,
+                workoutDayId: workoutDay.localId,
             });
         }
 

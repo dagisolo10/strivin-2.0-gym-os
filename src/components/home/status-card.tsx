@@ -1,5 +1,5 @@
 import { WorkoutPlanWithDays } from "@/store/use-static-store";
-import { Badge, Card, Div, H1, P, Row } from "@/components/ui/view";
+import { Badge, Card, Div, H1, P, Row } from "@/components/ui/display";
 
 interface StatusCardProp {
     streak: {
@@ -14,7 +14,7 @@ interface StatusCardProp {
 
 export default function StatusCard({ streak, plan, progress, completedSets, totalSets }: StatusCardProp) {
     return (
-        <Card className="bg-accent gap-4 rounded-4xl border-0 p-6">
+        <Card variant={"accent"} className="gap-4">
             <Row className="items-start">
                 <Div className="flex-1">
                     <P className="font-medium text-white/80">Current streak</P>

@@ -13,13 +13,13 @@ import DayCarousel from "@/components/home/day-carousel";
 import ExerciseCard from "@/components/home/exercise-card";
 import { PlanCarousel } from "@/components/plans/plan-carousel";
 import { LoadingScreen, ErrorScreen } from "@/components/ui/screen-ui";
-import { Badge, Div, H3, Row, Screen, Separator } from "@/components/ui/view";
+import { Badge, Div, H3, Row, Screen, Separator } from "@/components/ui/display";
 
 export default function HomeScreen() {
     const { isLoading, dataHash, user } = useUser();
 
     const [selectedDayName, setSelectedDayName] = useState<Weekday>(getWeekdayName());
-    const [expandedExerciseId, setExpandedExerciseId] = useState<number | null>(null);
+    const [expandedExerciseId, setExpandedExerciseId] = useState<string | null>(null);
 
     const { plans, plan, todaysLogs, workoutDay, todayKey, exercises } = useHomeData(user, selectedDayName);
 
@@ -37,7 +37,7 @@ export default function HomeScreen() {
     const streak = calculateStreak(userSessions);
 
     useEffect(() => {
-        if (plans) syncSelectedPlan(plans.map((plan) => plan.id));
+        if (plans) syncSelectedPlan(plans.map((plan) => plan.localId));
     }, [syncSelectedPlan, plans]);
 
     if (isLoading) return <LoadingScreen />;
@@ -45,7 +45,7 @@ export default function HomeScreen() {
     if (!user || !plan) return <ErrorScreen message="Finish your setup to unlock your dashboard." href="/onboarding" button="Open onboarding" />;
 
     return (
-        <Screen className="px-6 pt-8" nonScrollable>
+        <Screen nonScrollable>
             <FlatList
                 ListHeaderComponent={
                     <Div className="gap-6">
@@ -53,7 +53,7 @@ export default function HomeScreen() {
 
                         <StatusCard streak={streak} plan={plan} progress={progress} completedSets={completedSets} totalSets={totalSets} />
 
-                        <PlanCarousel plans={plans} selectedPlanId={plan.id} onSelect={setSelectedPlanId} title="Plan Library" subtitle="Swipe through plans and choose which routine you want to run today." />
+                        <PlanCarousel plans={plans} selectedPlanId={plan.localId} onSelect={setSelectedPlanId} title="Plan Library" subtitle="Swipe through plans and choose which routine you want to run today." />
 
                         <Snapshot plan={plan} totalExercises={totalExercises} />
 
@@ -68,19 +68,19 @@ export default function HomeScreen() {
                 ListFooterComponent={() => <Separator vertical />}
                 data={exercises || []}
                 extraData={`${dataHash}-${todaysLogs.length}-${exercises?.length ?? 0}`}
-                keyExtractor={(ex) => String(ex.id)}
+                keyExtractor={(ex) => String(ex.localId)}
                 showsVerticalScrollIndicator={false}
-                contentContainerClassName="pb-32"
+                contentContainerClassName="pb-24"
                 ItemSeparatorComponent={() => <Separator vertical size={12} />}
                 ListEmptyComponent={<RestDay selectedDayName={selectedDayName} />}
                 renderItem={({ item: exercise }) => (
                     <ExerciseCard
-                        userId={user.id}
+                        userId={user.localId}
                         exercise={exercise}
                         selectedDayName={selectedDayName}
                         expandedId={expandedExerciseId}
-                        logs={todaysLogs?.filter((log) => log.exerciseId === exercise.id) ?? []}
-                        onPress={() => setExpandedExerciseId((currentId) => (currentId === exercise.id ? null : exercise.id))}
+                        logs={todaysLogs?.filter((log) => log.exerciseId === exercise.localId).map((log) => ({ ...log, id: log.localId })) ?? []}
+                        onPress={() => setExpandedExerciseId((currentId) => (currentId === exercise.localId ? null : exercise.localId))}
                     />
                 )}
             />

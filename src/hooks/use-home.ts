@@ -4,7 +4,7 @@ import { usePlanStore } from "@/store/use-plan-store";
 import { UserWithRelations } from "@/store/use-static-store";
 
 interface UseHomeDataUser extends UserWithRelations {
-    id: number;
+    localId: string;
 }
 
 export function useHomeData(user: UseHomeDataUser | null | undefined, selectedDayName: Weekday) {
@@ -13,10 +13,10 @@ export function useHomeData(user: UseHomeDataUser | null | undefined, selectedDa
     const todayKey = getDateKey();
 
     const plans = user?.plans || [];
-    const plan = plans.find((plan) => plan.id === selectedPlanId) ?? plans[0];
+    const plan = plans.find((plan) => plan.localId === selectedPlanId) ?? plans[0];
 
     const workoutDay = plan?.days?.find((day) => day.dayName === selectedDayName);
-    const workoutDayId = workoutDay?.id;
+    const workoutDayId = workoutDay?.localId;
 
     const exercises = useMemo(() => {
         if (workoutDayId === undefined || workoutDayId === null) return [];
@@ -24,7 +24,7 @@ export function useHomeData(user: UseHomeDataUser | null | undefined, selectedDa
     }, [workoutDayId, workoutDay]);
 
     const todaysLogs = useMemo(() => {
-        return user?.sessions?.find((session) => session.date === todayKey)?.logs.map((log) => ({ ...log, exerciseId: log.exercise?.id })) || [];
+        return user?.sessions?.find((session) => session.date === todayKey)?.logs.map((log) => ({ ...log, exerciseId: log.exercise?.localId })) || [];
     }, [user?.sessions, todayKey]);
 
     return { plan, plans, workoutDay, exercises, todaysLogs, todayKey };

@@ -1,4 +1,4 @@
-import { P } from "./view";
+import { P } from "./display";
 
 import { cn } from "@/lib/utils";
 import * as Haptics from "expo-haptics";
@@ -12,7 +12,7 @@ interface ButtonProps extends PressableProps, VariantProps<typeof buttonVariants
     textClassName?: string;
 }
 
-const buttonVariants = cva("h-12 flex-row items-center justify-center rounded-2xl px-6 active:opacity-70", {
+const buttonVariants = cva("flex-row items-center justify-center rounded-2xl px-6", {
     variants: {
         variant: {
             primary: "bg-primary",
@@ -25,9 +25,9 @@ const buttonVariants = cva("h-12 flex-row items-center justify-center rounded-2x
         },
 
         size: {
-            default: "h-12 px-6",
-            sm: "h-9 px-3 rounded-lg",
-            lg: "h-14 px-8 rounded-2xl",
+            default: "h-14 px-6",
+            lg: "h-16 px-8",
+            sm: "h-9 px-3 rounded-xl",
             icon: "size-12 px-0",
         },
     },
@@ -42,7 +42,7 @@ const textVariants = {
     primary: "text-background",
     success: "text-background",
     secondary: "text-background",
-    destructive: "text-foreground",
+    destructive: "text-white",
     outline: "text-foreground",
     ghost: "text-foreground",
     link: "text-primary underline",
@@ -90,5 +90,5 @@ export const NavLink = ({ href, variant = "link", size = "sm", children, classNa
 };
 
 export const Input = ({ className, ...props }: TextInputProps & { className?: string }) => (
-    <TextInput placeholderTextColor="#999999" className={cn("border-border bg-background text-foreground h-14 w-full rounded-xl border pl-4", className)} {...props} />
+    <TextInput placeholderTextColor="#999999" className={cn("border-border bg-background text-foreground h-14 w-full rounded-2xl border pl-4 text-base", className)} {...props} />
 );

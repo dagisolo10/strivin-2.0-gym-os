@@ -20,12 +20,12 @@ export const Screen = ({ className, children, nonScrollable = false, ...props }:
     <SafeAreaView className="bg-dead-zone flex-1">
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1">
             {nonScrollable ? (
-                <Div className={cn("bg-background flex-1", className)} {...props}>
+                <Div className={cn("bg-background flex-1 px-6 py-8", className)} {...props}>
                     {children}
                 </Div>
             ) : (
                 <ScrollView className={cn("bg-background")} contentContainerStyle={{ flexGrow: 1 }} {...props}>
-                    <Div className={cn("flex-1", className)}>{children}</Div>
+                    <Div className={cn("flex-1 px-6 py-8", className)}>{children}</Div>
                 </ScrollView>
             )}
         </KeyboardAvoidingView>
@@ -34,17 +34,40 @@ export const Screen = ({ className, children, nonScrollable = false, ...props }:
 
 export const Separator = ({ vertical = false, size = 16 }: { vertical?: boolean; size?: number }) => <Div style={{ height: vertical ? size : 0, width: vertical ? 0 : size }} />;
 export const Div = ({ className, ...props }: ThemedViewProps) => <View className={cn("border-border", className)} {...props} />;
-export const Card = ({ className, ...props }: ThemedViewProps) => <Div className={cn("rounded-2xl border p-4 shadow-sm", className)} {...props} />;
+const cardVariants = cva("", {
+    variants: {
+        variant: {
+            default: "bg-card rounded-3xl border p-5 shadow-sm",
+            primary: "bg-primary rounded-3xl p-5",
+            accent: "bg-accent rounded-4xl p-6",
+            muted: "bg-muted rounded-3xl p-6",
+        },
+    },
+    defaultVariants: {
+        variant: "default",
+    },
+});
+
+export interface CardProps extends ThemedViewProps, VariantProps<typeof cardVariants> {}
+
+export const Card = ({ variant = "default", className, ...props }: CardProps) => <Div className={cn(cardVariants({ variant, className }))} {...props} />;
+
+export const Field = ({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) => (
+    <Div className={cn(className)}>
+        <Label>{label}</Label>
+        {children}
+    </Div>
+);
+
 export const Row = ({ className, ...props }: ThemedViewProps) => <View className={cn("border-border flex-row items-center justify-between", className)} {...props} />;
 export const Center = ({ className, ...props }: ThemedViewProps) => <View className={cn("border-border items-center justify-center", className)} {...props} />;
 
 /** Typography **/
 
-export const H1 = ({ className, ...props }: TypographyProps) => <Text className={cn("text-foreground text-4xl font-bold", className)} {...props} />;
-export const H2 = ({ className, ...props }: TypographyProps) => <Text className={cn("text-foreground text-3xl font-semibold", className)} {...props} />;
-export const H3 = ({ className, ...props }: TypographyProps) => <Text className={cn("text-foreground text-2xl font-semibold", className)} {...props} />;
+export const H1 = ({ className, ...props }: TypographyProps) => <Text className={cn("text-foreground text-4xl leading-snug font-bold", className)} {...props} />;
+export const H2 = ({ className, ...props }: TypographyProps) => <Text className={cn("text-foreground text-3xl leading-snug font-semibold", className)} {...props} />;
+export const H3 = ({ className, ...props }: TypographyProps) => <Text className={cn("text-foreground text-2xl leading-snug font-semibold", className)} {...props} />;
 export const P = ({ className, ...props }: TypographyProps) => <Text className={cn("text-foreground text-base font-semibold", className)} {...props} />;
-export const Lead = ({ className, ...props }: TypographyProps) => <Text className={cn("text-muted-foreground text-lg font-semibold", className)} {...props} />;
 export const Label = ({ className, ...props }: TypographyProps) => <Text className={cn("text-muted-foreground my-1.5 font-bold", className)} {...props} />;
 
 const badgeVariants = cva("inline-flex flex-row items-center justify-center rounded-full px-2.5 py-0.5 border", {

@@ -14,8 +14,8 @@ export interface ExerciseInput {
 }
 
 interface SavePlanInput {
-    userId: number;
-    planId?: number;
+    userId: string;
+    planId?: string;
     split: WorkoutSplit;
     workoutDays: Weekday[];
     exercises?: ExerciseInput[];
@@ -32,7 +32,7 @@ export async function saveWorkoutPlan(data: SavePlanInput) {
         let planId = data.planId;
 
         if (planId) {
-            const existingPlan = store.plans.find((plan) => plan.id === planId && plan.userId === userId);
+            const existingPlan = store.plans.find((plan) => plan.localId === planId && plan.userId === userId);
             if (!existingPlan) throw new Error("Plan not found");
 
             store.updatePlan(planId, {
@@ -44,7 +44,7 @@ export async function saveWorkoutPlan(data: SavePlanInput) {
 
             // Delete existing days for this plan
             const existingDays = store.workoutDays.filter((day) => day.planId === planId);
-            existingDays.forEach((day) => store.deleteWorkoutDay(day.id));
+            existingDays.forEach((day) => store.deleteWorkoutDay(day.localId));
         } else {
             const newPlan = store.createPlan({
                 split: data.split,
@@ -52,7 +52,7 @@ export async function saveWorkoutPlan(data: SavePlanInput) {
                 goal: data.goal ?? null,
                 fitnessLevel: data.fitnessLevel ?? null,
             });
-            planId = newPlan.id;
+            planId = newPlan.localId;
         }
 
         const dayRecords: WorkoutDay[] = data.workoutDays.map((day) => store.createWorkoutDay({ userId, planId: planId!, dayName: day }));
@@ -67,7 +67,7 @@ export async function saveWorkoutPlan(data: SavePlanInput) {
                         return {
                             userId,
                             planId: planId!,
-                            workoutDayId: dayRecord.id,
+                            workoutDayId: dayRecord.localId,
                             name: exercise.name,
                             sets: exercise.sets ?? null,
                             reps: exercise.reps ?? null,
@@ -94,11 +94,11 @@ export async function saveWorkoutPlan(data: SavePlanInput) {
     }
 }
 
-export async function deleteWorkoutPlan(userId: number, planId: number) {
+export async function deleteWorkoutPlan(userId: string, planId: string) {
     try {
         const store = useStaticStore.getState();
 
-        const plan = store.plans.find((plan) => plan.id === planId);
+        const plan = store.plans.find((plan) => plan.localId === planId);
         if (!plan || plan.userId !== userId) throw new Error("Plan not found");
 
         const deleted = store.deletePlan(planId);
