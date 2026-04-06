@@ -1,9 +1,9 @@
 import { cn } from "@/lib/utils";
 import * as schema from "@/db/sqlite";
 import { DAY_ORDER } from "@/constants/data";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/interactive";
 import { FlatList } from "react-native-gesture-handler";
-import { Badge, Card, Div, H3, P, Row } from "@/components/ui/view";
+import { Badge, Card, Div, H3, P, Row } from "@/components/ui/display";
 
 type PlanCard = typeof schema.workoutPlans.$inferSelect & {
     days: (typeof schema.workoutDays.$inferSelect & {
@@ -12,11 +12,11 @@ type PlanCard = typeof schema.workoutPlans.$inferSelect & {
 };
 
 interface PlanCarouselProps {
+    title?: string;
+    subtitle?: string;
     plans: PlanCard[];
     selectedPlanId: number | null;
     onSelect: (planId: number) => void;
-    title?: string;
-    subtitle?: string;
 }
 
 export function PlanCarousel({ plans, selectedPlanId, onSelect, title, subtitle }: PlanCarouselProps) {
@@ -42,7 +42,7 @@ export function PlanCarousel({ plans, selectedPlanId, onSelect, title, subtitle 
 
                     return (
                         <Button variant="ghost" className="h-auto p-0" onPress={() => onSelect(plan.id)} component>
-                            <Card className={cn("min-h-72 w-80 gap-4 rounded-[30px] border-0 px-5 py-5", isSelected ? "bg-primary" : "bg-muted")}>
+                            <Card variant={isSelected ? "primary" : "muted"} className={cn("min-h-72 w-80 gap-4")}>
                                 <Row className="items-start gap-3">
                                     <Div className="flex-1">
                                         <Row>

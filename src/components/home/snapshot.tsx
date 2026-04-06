@@ -1,6 +1,6 @@
-import { NavLink } from "@/components/ui/button";
-import { Card, Div, H3, P, Row } from "@/components/ui/view";
+import { NavLink } from "@/components/ui/interactive";
 import { WorkoutPlanWithDays } from "@/store/use-static-store";
+import { Card, Div, H3, P, Row } from "@/components/ui/display";
 
 interface SnapshotProp {
     plan: WorkoutPlanWithDays;
@@ -9,7 +9,7 @@ interface SnapshotProp {
 
 export default function Snapshot({ plan, totalExercises }: SnapshotProp) {
     return (
-        <Card className="gap-4 rounded-[28px] p-5">
+        <Card className="gap-4">
             <Row>
                 <Div>
                     <P className="text-muted-foreground text-xs tracking-wider uppercase">Active Plan</P>

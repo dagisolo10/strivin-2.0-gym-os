@@ -1,5 +1,5 @@
 import { MoonIcon } from "lucide-react-native";
-import { Div, H3, P } from "@/components/ui/view";
+import { Div, H3, P } from "@/components/ui/display";
 
 export default function RestDay({ selectedDayName }: { selectedDayName: Weekday }) {
     return (

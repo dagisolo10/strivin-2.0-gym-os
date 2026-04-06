@@ -13,7 +13,7 @@ import DayCarousel from "@/components/home/day-carousel";
 import ExerciseCard from "@/components/home/exercise-card";
 import { PlanCarousel } from "@/components/plans/plan-carousel";
 import { LoadingScreen, ErrorScreen } from "@/components/ui/screen-ui";
-import { Badge, Div, H3, Row, Screen, Separator } from "@/components/ui/view";
+import { Badge, Div, H3, Row, Screen, Separator } from "@/components/ui/display";
 
 export default function HomeScreen() {
     const { isLoading, dataHash, user } = useUser();
@@ -45,7 +45,7 @@ export default function HomeScreen() {
     if (!user || !plan) return <ErrorScreen message="Finish your setup to unlock your dashboard." href="/onboarding" button="Open onboarding" />;
 
     return (
-        <Screen className="px-6 pt-8" nonScrollable>
+        <Screen nonScrollable>
             <FlatList
                 ListHeaderComponent={
                     <Div className="gap-6">
@@ -70,7 +70,7 @@ export default function HomeScreen() {
                 extraData={`${dataHash}-${todaysLogs.length}-${exercises?.length ?? 0}`}
                 keyExtractor={(ex) => String(ex.id)}
                 showsVerticalScrollIndicator={false}
-                contentContainerClassName="pb-32"
+                contentContainerClassName="pb-24"
                 ItemSeparatorComponent={() => <Separator vertical size={12} />}
                 ListEmptyComponent={<RestDay selectedDayName={selectedDayName} />}
                 renderItem={({ item: exercise }) => (

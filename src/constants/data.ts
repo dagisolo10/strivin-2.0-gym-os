@@ -13,3 +13,21 @@ export const TOTAL_STEPS = 6;
 export const weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
 
 export const DAY_ORDER: Record<Weekday, number> = { Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4, Saturday: 5, Sunday: 6 };
+
+export const DISTANCE_UNITS: Extract<Unit, "km" | "mi">[] = ["km", "mi"];
+export const WEIGHT_UNITS: Extract<Unit, "kg" | "lb">[] = ["kg", "lb"];
+
+export const TYPES: ExerciseType[] = ["Push", "Pull", "Legs", "Core", "Cardio"];
+export const VARIANTS: ExerciseVariant[] = ["Upper", "Lower", "Endurance", "Full Body"];
+export const WORKOUT_SPLIT: WorkoutSplit[] = ["Push Pull Leg", "Upper Lower", "Full Body", "Endurance"];
+
+export const GOALS: { label: Goal; icon: string; note: string }[] = [
+    { label: "Hypertrophy", icon: "flash-outline", note: "Build size with steady progressive overload." },
+    { label: "Strength", icon: "barbell-outline", note: "Bias heavier work and lower rep targets." },
+    { label: "Endurance", icon: "heart-outline", note: "Improve stamina and work capacity." },
+    { label: "Fat Loss", icon: "walk-outline", note: "Stay consistent with training volume & cardio." },
+];
+
+export const FITNESS_LEVELS: FitnessLevel[] = ["Beginner", "Intermediate", "Advanced"];
+
+export const SESSION_LENGTHS = [30, 45, 60, 90];

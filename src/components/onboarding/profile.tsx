@@ -1,5 +1,5 @@
-import { Button } from "../ui/button";
-import { Badge, Card, Div, P } from "../ui/view";
+import { Button } from "../ui/interactive";
+import { Badge, Card, Div, H3, P } from "../ui/display";
 
 import { Image } from "react-native";
 import * as Haptics from "expo-haptics";
@@ -29,7 +29,7 @@ export default function Profile() {
     };
 
     return (
-        <Card className="bg-muted/50 items-center gap-5 rounded-[28px] border-0 px-5 py-6">
+        <Card className="items-center gap-4 rounded-4xl p-8">
             <Badge variant="outline">Avatar</Badge>
             <Controller
                 name="profile"
@@ -39,8 +39,8 @@ export default function Profile() {
                         <Button onPress={() => pickImage(onChange)} className="border-border bg-background size-36 overflow-hidden rounded-full border-2 border-dashed p-0">
                             {value ? <Image source={{ uri: value }} className="size-full rounded-full" /> : <Ionicons name="camera-outline" size={32} color="#527bda" />}
                         </Button>
-                        <P>Tap to upload a profile photo</P>
-                        <P className="text-muted-foreground text-center text-sm">Optional, but it makes the app feel like yours right away.</P>
+                        <H3>Tap to upload a profile photo</H3>
+                        <P className="text-muted-foreground text-center">Optional, but it makes the app feel like yours right away.</P>
                     </Div>
                 )}
             />

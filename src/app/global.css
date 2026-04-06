@@ -13,11 +13,12 @@
     --primary: #527bda;
     --accent: #ea7a53;
     --muted: #f6eecf;
+    --card: hsl(48, 68, 89 / 50);
     --muted-foreground: #666666;
 
     --border: hsl(none 0% 0% / 0.1);
     --success: #16a34a;
-    --destructive: #dc2626;
+    --destructive: #e35454;
 }
 
 .dark {
@@ -30,6 +31,7 @@
 
     --muted-foreground: #b3b3b3;
     --muted: #1e293b;
+    --card: hsl(217°, 33%, 17% / 50);
     --border: #252b32;
 }
 
@@ -41,19 +43,10 @@
     --color-accent: var(--accent);
     --color-muted-foreground: var(--muted-foreground);
     --color-muted: var(--muted);
+    --color-card: var(--card);
     --color-border: var(--border);
     --color-success: var(--success);
     --color-destructive: var(--destructive);
-
-    --spacing-1: 4px;
-    --spacing-2: 8px;
-    --spacing-3: 12px;
-    --spacing-4: 16px;
-    --spacing-5: 20px;
-    --spacing-6: 24px;
-    --spacing-8: 32px;
-    --spacing-10: 40px;
-    --spacing-12: 48px;
 
     --font-sans: sans-regular;
     --font-light: sans-light;
@@ -67,15 +60,7 @@
     .row {
         @apply flex-row items-center;
     }
-    .tabs-icon {
-        @apply size-12 items-center justify-center;
-    }
-
-    .tabs-pill {
-        @apply size-12 items-center justify-center rounded-full bg-transparent;
-    }
-
-    .tabs-active {
-        @apply bg-accent;
+    .tabs-icon-wrapper {
+        @apply relative size-12 items-center justify-center;
     }
 }

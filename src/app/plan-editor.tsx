@@ -1,17 +1,18 @@
 import { z } from "zod";
+import { cn } from "@/lib/utils";
 import { Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo } from "react";
 import { useUser } from "@/hooks/use-user";
 import { toast } from "react-native-sonner";
-import { weekdays } from "@/constants/data";
 import { Controller, useForm } from "react-hook-form";
 import { usePlanStore } from "@/store/use-plan-store";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Button, Input } from "@/components/ui/button";
 import { PlanCarousel } from "@/components/plans/plan-carousel";
-import { Badge, Card, Div, H1, H2, P, Row, Screen } from "@/components/ui/view";
+import { Button, Input, NavLink } from "@/components/ui/interactive";
 import { deleteWorkoutPlan, saveWorkoutPlan, ExerciseInput } from "@/server/plan";
+import { FITNESS_LEVELS, GOALS, weekdays, WORKOUT_SPLIT } from "@/constants/data";
+import { Badge, Card, Div, H1, H2, Label, P, Row, Screen } from "@/components/ui/display";
 
 const planEditorSchema = z.object({
     split: z.string().trim().min(1, "Split name is required"),
@@ -23,10 +24,7 @@ const planEditorSchema = z.object({
 
 type PlanEditorValues = z.infer<typeof planEditorSchema>;
 
-const splitPresets = ["Push Pull Leg", "Upper Lower", "Full Body", "Bro Split", "Hybrid"];
-const goalPresets: Goal[] = ["Hypertrophy", "Strength", "Endurance"];
 const lengthPresets = [45, 60, 75, 90];
-const levelPresets: FitnessLevel[] = ["Beginner", "Intermediate", "Advanced"];
 
 export default function PlanEditorScreen() {
     const router = useRouter();
@@ -121,197 +119,197 @@ export default function PlanEditorScreen() {
     };
 
     return (
-        <Screen className="px-6 py-8">
-            <Div className="gap-6 pb-24">
-                <Card className="bg-accent gap-4 rounded-4xl border-0 px-6 py-6">
-                    <Badge variant="glass">Plan Editor</Badge>
-                    <Div className="gap-2">
-                        <H1 className="text-3xl text-white">Shape your training library</H1>
-                        <P className="max-w-[320px] text-white/85">Edit the selected plan without jumping back into onboarding, or spin up a second version for a new phase.</P>
-                    </Div>
-                    <Row className="gap-3">
-                        <EditorPill label="Saved plans" value={`${plans.length}`} />
-                        <EditorPill label="Active moves" value={`${activePlan?.days.reduce((sum, day) => sum + day.exercises.length, 0) ?? 0}`} />
-                    </Row>
-                </Card>
+        <Screen className="gap-6">
+            <H1>Plan Editor</H1>
 
-                <PlanCarousel plans={plans} selectedPlanId={activePlan?.id ?? null} onSelect={setSelectedPlanId} title="Plan carousel" subtitle="Choose the plan you want to refine before making changes." />
+            <Card variant={"accent"} className="items-start gap-4">
+                <Div className="w-full gap-2">
+                    <H2 className="text-white">Shape your training library</H2>
+                    <P className="max-w-[320px] text-white/85">Edit the selected plan without jumping back into onboarding, or spin up a second version for a new phase.</P>
+                </Div>
+                <Row className="gap-3">
+                    <EditorPill label="Saved plans" value={`${plans.length}`} />
+                    <EditorPill label="Active moves" value={`${activePlan?.days.reduce((sum, day) => sum + day.exercises.length, 0) ?? 0}`} />
+                </Row>
+            </Card>
 
-                <Card className="bg-background gap-5 rounded-[28px] border-0 px-5 py-5">
-                    <SectionTitle eyebrow="Structure" title="Plan identity" note="Set the split, goal, and cadence that define this cycle." />
+            <PlanCarousel plans={plans} selectedPlanId={activePlan?.id ?? null} onSelect={setSelectedPlanId} title="Plan carousel" subtitle="Choose the plan you want to refine before making changes." />
 
-                    <Controller
-                        control={methods.control}
-                        name="split"
-                        render={({ field: { value, onChange }, fieldState: { error } }) => (
-                            <Div className="gap-3">
-                                <P className="text-sm">Split name</P>
-                                <Input className={error ? "border-destructive h-14 rounded-2xl" : "h-14 rounded-2xl"} value={value} onChangeText={onChange} placeholder="e.g. Upper Lower" />
-                                <Div className="row flex-wrap gap-2">
-                                    {splitPresets.map((preset) => (
+            <Card className="gap-5">
+                <SectionTitle eyebrow="Structure" title="Plan identity" note="Set the split, goal, and cadence that define this cycle." />
+
+                <Controller
+                    control={methods.control}
+                    name="split"
+                    render={({ field: { value, onChange }, fieldState: { error } }) => (
+                        <Div>
+                            <Label>Split name</Label>
+                            <Input className={error && "border-destructive"} value={value} onChangeText={onChange} placeholder="e.g. Upper Lower" />
+
+                            <Div className="row mt-4 flex-wrap gap-2">
+                                {WORKOUT_SPLIT.map((preset) => (
+                                    <Button
+                                        key={preset}
+                                        variant={value === preset ? "secondary" : "outline"}
+                                        className="min-w-36 flex-1 px-4"
+                                        textClassName={value === preset ? "text-background" : "text-muted-foreground"}
+                                        onPress={() => onChange(preset)}>
+                                        {preset}
+                                    </Button>
+                                ))}
+                            </Div>
+                        </Div>
+                    )}
+                />
+
+                <Controller
+                    control={methods.control}
+                    name="workoutDays"
+                    render={({ field: { value = [], onChange }, fieldState: { error } }) => (
+                        <Div className="gap-3">
+                            <P className="text-sm">Workout days</P>
+                            <Div className="row flex-wrap gap-2">
+                                {weekdays.map((day) => {
+                                    const selected = value.includes(day);
+                                    return (
                                         <Button
-                                            key={preset}
-                                            variant={value === preset ? "secondary" : "outline"}
-                                            className="rounded-2xl px-4"
-                                            textClassName={value === preset ? "text-foreground" : "text-muted-foreground"}
-                                            onPress={() => onChange(preset)}>
-                                            {preset}
+                                            key={day}
+                                            variant={selected ? "secondary" : "outline"}
+                                            className={cn(error && "border-destructive", "min-w-28 flex-1 px-4")}
+                                            textClassName={selected ? "text-background" : "text-muted-foreground"}
+                                            onPress={() => onChange(selected ? value.filter((item) => item !== day) : [...value, day])}>
+                                            {day}
                                         </Button>
-                                    ))}
-                                </Div>
+                                    );
+                                })}
                             </Div>
-                        )}
-                    />
+                        </Div>
+                    )}
+                />
+            </Card>
 
-                    <Controller
-                        control={methods.control}
-                        name="workoutDays"
-                        render={({ field: { value = [], onChange }, fieldState: { error } }) => (
-                            <Div className="gap-3">
-                                <P className="text-sm">Workout days</P>
-                                <Div className="row flex-wrap gap-2">
-                                    {weekdays.map((day) => {
-                                        const selected = value.includes(day);
-                                        return (
-                                            <Button
-                                                key={day}
-                                                variant={selected ? "secondary" : "outline"}
-                                                className={error ? "border-destructive rounded-2xl px-4" : "rounded-2xl px-4"}
-                                                textClassName={selected ? "text-foreground" : "text-muted-foreground"}
-                                                onPress={() => onChange(selected ? value.filter((item) => item !== day) : [...value, day])}>
-                                                {day}
-                                            </Button>
-                                        );
-                                    })}
-                                </Div>
+            <Card className="gap-5">
+                <SectionTitle eyebrow="Performance" title="Training profile" note="Tune the intent of the plan so the rest of the app presents the right cues." />
+
+                <Controller
+                    control={methods.control}
+                    name="goal"
+                    render={({ field: { value, onChange } }) => (
+                        <Div className="gap-3">
+                            <P className="text-sm">Primary goal</P>
+                            <Div className="row flex-wrap gap-2">
+                                {GOALS.map((goal) => (
+                                    <Button
+                                        key={goal.label}
+                                        variant={value === goal.label ? "secondary" : "outline"}
+                                        className="min-w-36 flex-1 px-4"
+                                        textClassName={value === goal.label ? "text-background" : "text-muted-foreground"}
+                                        onPress={() => onChange(goal.label)}>
+                                        {goal.label}
+                                    </Button>
+                                ))}
                             </Div>
-                        )}
-                    />
-                </Card>
+                        </Div>
+                    )}
+                />
 
-                <Card className="bg-muted/50 gap-5 rounded-[28px] border-0 px-5 py-5">
-                    <SectionTitle eyebrow="Performance" title="Training profile" note="Tune the intent of the plan so the rest of the app presents the right cues." />
-
-                    <Controller
-                        control={methods.control}
-                        name="goal"
-                        render={({ field: { value, onChange } }) => (
-                            <Div className="gap-3">
-                                <P className="text-sm">Primary goal</P>
-                                <Div className="row flex-wrap gap-2">
-                                    {goalPresets.map((goal) => (
-                                        <Button key={goal} variant={value === goal ? "secondary" : "outline"} className="rounded-2xl px-4" textClassName={value === goal ? "text-foreground" : "text-muted-foreground"} onPress={() => onChange(goal)}>
-                                            {goal}
-                                        </Button>
-                                    ))}
-                                </Div>
+                <Controller
+                    control={methods.control}
+                    name="sessionLength"
+                    render={({ field: { value, onChange } }) => (
+                        <Div className="gap-3">
+                            <P className="text-sm">Session length</P>
+                            <Div className="row flex-wrap gap-2">
+                                {lengthPresets.map((length) => (
+                                    <Button
+                                        key={length}
+                                        variant={value === length ? "secondary" : "outline"}
+                                        className="min-w-36 flex-1 px-4"
+                                        textClassName={value === length ? "text-background" : "text-muted-foreground"}
+                                        onPress={() => onChange(length)}>
+                                        {length} min
+                                    </Button>
+                                ))}
                             </Div>
-                        )}
-                    />
+                        </Div>
+                    )}
+                />
 
-                    <Controller
-                        control={methods.control}
-                        name="sessionLength"
-                        render={({ field: { value, onChange } }) => (
-                            <Div className="gap-3">
-                                <P className="text-sm">Session length</P>
-                                <Div className="row flex-wrap gap-2">
-                                    {lengthPresets.map((length) => (
-                                        <Button
-                                            key={length}
-                                            variant={value === length ? "secondary" : "outline"}
-                                            className="rounded-2xl px-4"
-                                            textClassName={value === length ? "text-foreground" : "text-muted-foreground"}
-                                            onPress={() => onChange(length)}>
-                                            {length} min
-                                        </Button>
-                                    ))}
-                                </Div>
+                <Controller
+                    control={methods.control}
+                    name="fitnessLevel"
+                    render={({ field: { value, onChange } }) => (
+                        <Div className="gap-3">
+                            <P className="text-sm">Fitness level</P>
+                            <Div className="row flex-wrap gap-2">
+                                {FITNESS_LEVELS.map((level) => (
+                                    <Button key={level} variant={value === level ? "secondary" : "outline"} className="flex-1 px-2" textClassName={value === level ? "text-background" : "text-muted-foreground"} onPress={() => onChange(level)}>
+                                        {level}
+                                    </Button>
+                                ))}
                             </Div>
-                        )}
-                    />
+                        </Div>
+                    )}
+                />
+            </Card>
 
-                    <Controller
-                        control={methods.control}
-                        name="fitnessLevel"
-                        render={({ field: { value, onChange } }) => (
-                            <Div className="gap-3">
-                                <P className="text-sm">Fitness level</P>
-                                <Div className="row flex-wrap gap-2">
-                                    {levelPresets.map((level) => (
-                                        <Button
-                                            key={level}
-                                            variant={value === level ? "secondary" : "outline"}
-                                            className="rounded-2xl px-4"
-                                            textClassName={value === level ? "text-foreground" : "text-muted-foreground"}
-                                            onPress={() => onChange(level)}>
-                                            {level}
-                                        </Button>
-                                    ))}
-                                </Div>
-                            </Div>
-                        )}
-                    />
-                </Card>
+            <Card className="gap-3">
+                <SectionTitle eyebrow="Next step" title="Exercise management" note="This editor handles plan structure. Use the Add screen to create or expand the movement library for the active plan." />
 
-                <Card className="bg-background gap-3 rounded-[28px] border-0 px-5 py-5">
-                    <SectionTitle eyebrow="Next step" title="Exercise management" note="This editor handles plan structure. Use the Add screen to create or expand the movement library for the active plan." />
-                    <Button variant="outline" className="h-14 rounded-2xl" onPress={() => router.push("/(tabs)/add")}>
-                        Open Add Screen
-                    </Button>
-                </Card>
+                <NavLink href={"/(tabs)/add"} variant={"outline"}>
+                    Open Add Screen
+                </NavLink>
+            </Card>
 
-                <Button className="h-16 rounded-2xl" onPress={methods.handleSubmit((values) => savePlan(values, false))}>
-                    Save Changes
-                </Button>
+            <Button onPress={methods.handleSubmit((values) => savePlan(values, false))}>Save Changes</Button>
 
-                <Button variant="outline" className="h-16 rounded-2xl" onPress={methods.handleSubmit((values) => savePlan(values, true))}>
-                    Save As New Plan
-                </Button>
+            <Button variant="outline" onPress={methods.handleSubmit((values) => savePlan(values, true))}>
+                Save As New Plan
+            </Button>
 
-                {activePlan && plans.length > 1 ? (
-                    <Button
-                        variant="outline"
-                        className="h-16 rounded-2xl"
-                        onPress={() =>
-                            Alert.alert("Delete plan", "This removes the selected plan and its exercises from this device.", [
-                                { text: "Cancel", style: "cancel" },
-                                {
-                                    text: "Delete",
-                                    style: "destructive",
-                                    onPress: async () => {
-                                        const result = await deleteWorkoutPlan(user.id, activePlan.id);
-                                        if (!result.success) {
-                                            toast.error("Could not delete plan");
-                                            return;
-                                        }
-                                        toast.success("Plan deleted");
-                                        router.back();
-                                    },
+            {activePlan && plans.length > 1 ? (
+                <Button
+                    variant="destructive"
+                    onPress={() =>
+                        Alert.alert("Delete plan", "This removes the selected plan and its exercises from this device.", [
+                            { text: "Cancel", style: "cancel" },
+                            {
+                                text: "Delete",
+                                style: "destructive",
+                                onPress: async () => {
+                                    const result = await deleteWorkoutPlan(user.id, activePlan.id);
+                                    if (!result.success) {
+                                        toast.error("Could not delete plan");
+                                        return;
+                                    }
+                                    toast.success("Plan deleted");
+                                    router.back();
                                 },
-                            ])
-                        }>
-                        Delete Selected Plan
-                    </Button>
-                ) : null}
-            </Div>
+                            },
+                        ])
+                    }>
+                    Delete Selected Plan
+                </Button>
+            ) : null}
         </Screen>
     );
 }
 
 function EditorPill({ label, value }: { label: string; value: string }) {
     return (
-        <Div className="flex-1 rounded-3xl bg-white/12 px-4 py-4">
+        <Card className="flex-1 border-0">
             <P className="text-xs text-white/75 uppercase">{label}</P>
             <P className="mt-1 text-xl text-white">{value}</P>
-        </Div>
+        </Card>
     );
 }
 
 function SectionTitle({ eyebrow, title, note }: { eyebrow: string; title: string; note: string }) {
     return (
         <Div className="gap-1">
-            <Badge variant="outline">{eyebrow}</Badge>
+            <Badge className="self-end" variant="outline">
+                {eyebrow}
+            </Badge>
             <H2 className="text-2xl">{title}</H2>
             <P className="text-muted-foreground text-sm">{note}</P>
         </Div>
