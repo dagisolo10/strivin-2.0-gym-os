@@ -1,18 +1,13 @@
-import { useMemo } from "react";
-import { useStaticStore } from "@/store/use-static-store";
+import { useAppData } from "./use-app-data";
+import { UserWithPlanOnly } from "@/types/types";
 
 export function useUser() {
-    const { getUserWithRelations, currentUserId } = useStaticStore();
+    const { user, plans, updatedAt, isLoading } = useAppData();
+    const userWithRelations: UserWithPlanOnly | null = user ? { ...user, plans, sessions: [] } : null;
 
-    const user = useMemo(() => {
-        if (!currentUserId) return null;
-        return getUserWithRelations(currentUserId);
-    }, [currentUserId, getUserWithRelations]);
-
-    const dataHash = useMemo(() => {
-        if (!user) return "0-0";
-        return `${Date.now()}-${user.sessions?.length ?? 0}`;
-    }, [user]);
-
-    return { user, isLoading: !user, dataHash, updatedAt: Date.now() };
+    return {
+        user: userWithRelations,
+        isLoading,
+        updatedAt,
+    };
 }

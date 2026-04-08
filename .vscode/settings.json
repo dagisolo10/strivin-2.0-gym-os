@@ -4,6 +4,8 @@
         "source.organizeImports": "explicit",
         "source.sortMembers": "explicit"
     },
-    "files.autoSaveDelay": 3000
+    "files.autoSaveDelay": 3000,
+    "java.project.explorer.showNonJavaResources": false,
+    "java.dependency.syncWithFolderExplorer": true
     // "files.autoSave": "off"
 }

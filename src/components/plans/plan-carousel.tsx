@@ -1,25 +1,14 @@
 import { cn } from "@/lib/utils";
 import { DAY_ORDER } from "@/constants/data";
+import { WorkoutPlanWithDays } from "@/types/types";
 import { Button } from "@/components/ui/interactive";
 import { FlatList } from "react-native-gesture-handler";
 import { Badge, Card, Div, H3, P, Row } from "@/components/ui/display";
 
-export interface PlanCard {
-    localId: string;
-    split: WorkoutSplit;
-    goal: Goal | null;
-    fitnessLevel: FitnessLevel | null;
-    days: {
-        localId: string;
-        dayName: Weekday;
-        exercises?: { name: string }[];
-    }[];
-}
-
 interface PlanCarouselProps {
     title?: string;
     subtitle?: string;
-    plans: PlanCard[];
+    plans: WorkoutPlanWithDays[];
     selectedPlanId: string | null;
     onSelect: (planId: string) => void;
 }
@@ -40,7 +29,7 @@ export function PlanCarousel({ plans, selectedPlanId, onSelect, title, subtitle 
                 keyExtractor={(item) => String(item.localId)}
                 showsHorizontalScrollIndicator={false}
                 contentContainerClassName="gap-3 pr-2"
-                renderItem={({ item: plan }) => {
+                renderItem={({ item: plan, index }) => {
                     const isSelected = plan.localId === selectedPlanId;
                     const orderedDays = [...plan.days].sort((a, b) => DAY_ORDER[a.dayName] - DAY_ORDER[b.dayName]);
                     const totalExercises = orderedDays.reduce((sum, day) => sum + (day.exercises?.length ?? 0), 0);
@@ -51,18 +40,24 @@ export function PlanCarousel({ plans, selectedPlanId, onSelect, title, subtitle 
                                 <Row className="items-start gap-3">
                                     <Div className="flex-1">
                                         <Row>
-                                            <P className={cn("text-xs uppercase", isSelected ? "text-white/70" : "text-muted-foreground")}>Plan {plan.localId}</P>
-                                            <Badge variant={isSelected ? "glass" : "outline"}>{orderedDays.length} days</Badge>
+                                            <P className={cn("text-xs uppercase", isSelected ? "text-white/70" : "text-muted-foreground")}>Plan {index + 1}</P>
+                                            <Badge variant={isSelected ? "glass" : "outline"}>
+                                                {orderedDays.length} day{orderedDays.length > 1 ? "s" : ""}
+                                            </Badge>
                                         </Row>
                                         <H3 className={cn(isSelected ? "text-white" : "text-foreground")}>{plan.split}</H3>
-                                        <P className={cn("mt-1 text-sm", isSelected ? "text-white/75" : "text-muted-foreground")}>{plan.goal ?? "General fitness"}</P>
+                                        <P className={cn("mt-1 text-sm", isSelected ? "text-white/75" : "text-muted-foreground")}>
+                                            {plan.goal ?? "General fitness"}
+                                        </P>
                                     </Div>
                                 </Row>
 
                                 <Div className="items-start gap-2">
                                     <Row className="gap-2">
                                         {orderedDays.slice(0, 4).map((day) => (
-                                            <Div key={`${plan.localId}-${day.localId}`} className={cn("min-w-16 flex-1 items-center rounded-full px-4 py-2", isSelected ? "bg-white/12" : "bg-accent")}>
+                                            <Div
+                                                key={`${plan.localId}-${day.localId}`}
+                                                className={cn("min-w-16 flex-1 items-center rounded-full px-4 py-2", isSelected ? "bg-white/12" : "bg-accent")}>
                                                 <P className={cn("text-xs text-white")}>{day.dayName.slice(0, 3)}</P>
                                             </Div>
                                         ))}
@@ -77,7 +72,9 @@ export function PlanCarousel({ plans, selectedPlanId, onSelect, title, subtitle 
                                 <Row className="mt-auto">
                                     <Div>
                                         <P className={cn("text-xs uppercase", isSelected ? "text-white/70" : "text-muted-foreground")}>Exercises</P>
-                                        <P className={cn("mt-1 text-base", isSelected ? "text-white" : "text-foreground")}>{totalExercises} movements</P>
+                                        <P className={cn("mt-1 text-base", isSelected ? "text-white" : "text-foreground")}>
+                                            {totalExercises} movement{totalExercises > 1 ? "s" : ""}
+                                        </P>
                                     </Div>
                                     <Div className={cn("rounded-2xl p-3", isSelected ? "bg-white/12" : "bg-muted/60")}>
                                         <P className={cn("text-xs uppercase", isSelected ? "text-white/70" : "text-muted-foreground")}>Level</P>

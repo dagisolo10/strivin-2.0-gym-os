@@ -1,3 +1,4 @@
+import { enqueueWrite } from "@/db/write-queue";
 import { useDrizzle } from "./db-provider";
 
 import { eq } from "drizzle-orm";
@@ -45,20 +46,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, [db]);
 
     const signIn = async (name: string, profile: string | null = null): Promise<User> => {
-        // Check if user exists
-        const existingUsers = await db.select().from(schema.users).limit(1);
+        const nextUser = await enqueueWrite(() =>
+            db.transaction(async (tx) => {
+                const existingUser = await tx.query.users.findFirst();
 
-        if (existingUsers.length > 0) {
-            // Update existing user
-            const [updated] = await db.update(schema.users).set({ name, profile }).where(eq(schema.users.localId, existingUsers[0].localId)).returning();
-            setUser(updated);
-            return updated;
-        }
+                if (existingUser) {
+                    const [updated] = await tx.update(schema.users).set({ name, profile }).where(eq(schema.users.localId, existingUser.localId)).returning();
+                    return updated;
+                }
 
-        // Create new user
-        const [newUser] = await db.insert(schema.users).values({ name, profile, serverId: randomUUID(), localId: randomUUID() }).returning();
-        setUser(newUser);
-        return newUser;
+                const [newUser] = await tx.insert(schema.users).values({ name, profile, serverId: randomUUID(), localId: randomUUID() }).returning();
+                return newUser;
+            }),
+        );
+
+        setUser(nextUser);
+        return nextUser;
     };
 
     const signOut = async () => {
@@ -69,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const updateUser = async (updates: Partial<User>) => {
         if (!user) return;
-        const [updated] = await db.update(schema.users).set(updates).where(eq(schema.users.localId, user.localId)).returning();
+        const [updated] = await enqueueWrite(() => db.update(schema.users).set(updates).where(eq(schema.users.localId, user.localId)).returning());
         setUser(updated);
     };
 

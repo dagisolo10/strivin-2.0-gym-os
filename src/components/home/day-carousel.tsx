@@ -1,9 +1,9 @@
 import { cn } from "@/lib/utils";
 import { weekdays } from "@/constants/data";
 import { Div, P } from "@/components/ui/display";
+import { WorkoutPlanWithDays } from "@/types/types";
 import { Button } from "@/components/ui/interactive";
 import { FlatList } from "react-native-gesture-handler";
-import { WorkoutPlanWithDays } from "@/store/use-static-store";
 
 interface CarouselProp {
     selectedDayName: Weekday;

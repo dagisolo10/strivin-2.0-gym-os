@@ -1,14 +1,9 @@
 import { Image } from "react-native";
-import { formatDateLabel } from "@/lib/helper-functions";
+import { UserWithPlanOnly } from "@/types/types";
 import { Div, H2, P, Row } from "@/components/ui/display";
-import { UserWithRelations } from "@/store/use-static-store";
+import { formatDateLabel, getDateKey } from "@/lib/helper-functions";
 
-interface HeaderProp {
-    user: UserWithRelations;
-    todayKey: string;
-}
-
-export default function Header({ user, todayKey }: HeaderProp) {
+export default function Header({ user }: { user: UserWithPlanOnly }) {
     return (
         <Row className="items-center">
             <Div className="items-start gap-2">
@@ -22,7 +17,7 @@ export default function Header({ user, todayKey }: HeaderProp) {
             </Div>
             <Div className="items-end">
                 <P className="text-muted-foreground text-sm">Today</P>
-                <P className="text-xl">{formatDateLabel(todayKey)}</P>
+                <P className="text-xl">{formatDateLabel(getDateKey())}</P>
             </Div>
         </Row>
     );

@@ -11,6 +11,7 @@ export const exerciseSchema = z
         sets: z.number().optional(),
         reps: z.number().optional(),
         weight: z.number().optional(),
+        
         distance: z.number().optional(),
         duration: z.number().optional(),
     })

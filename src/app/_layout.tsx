@@ -1,44 +1,56 @@
 import "./global.css";
 import "react-native-reanimated";
 
+// import * as Sentry from "@sentry.react-native";
 import { useFonts } from "expo-font";
-import { useEffect, Suspense } from "react";
 import { Toaster } from "react-native-sonner";
-import { ActivityIndicator } from "react-native";
+import migrations from "@/drizzle/migrations";
+import { getDb, getExpoDb } from "@/db/client";
 import { SplashScreen, Stack } from "expo-router";
+import React, { Suspense, useEffect } from "react";
+import { DrizzleProvider } from "@/context/db-provider";
+import { useDrizzleStudio } from "expo-drizzle-studio-plugin";
+import { useMigrations } from "drizzle-orm/expo-sqlite/migrator";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ErrorScreen, LoadingScreen } from "@/components/ui/screen-ui";
 
 SplashScreen.preventAutoHideAsync();
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
 
-function RootContent() {
+export default function RootLayout() {
+    const expoDB = getExpoDb();
+    const drizzleDB = getDb();
+
     const [fontsLoaded, fontError] = useFonts(fonts);
+
+    const { error, success } = useMigrations(drizzleDB, migrations);
+    useDrizzleStudio(success ? expoDB : null);
 
     useEffect(() => {
         (fontsLoaded || fontError) && SplashScreen.hideAsync();
     }, [fontError, fontsLoaded]);
 
-    if (fontError) return <ErrorScreen message={fontError.message} />;
-    if (!fontsLoaded) return <LoadingScreen />;
+    if (!publishableKey) throw Error("Add your Clerk Publishable Key to the .env file");
 
-    console.log("Hot reload...");
+    const renderContent = () => {
+        if (error || fontError) return <ErrorScreen message={error?.message || fontError?.message} />;
+        if (!success || !fontsLoaded) return <LoadingScreen />;
+
+        return (
+            <Suspense fallback={<LoadingScreen />}>
+                <DrizzleProvider db={drizzleDB}>
+                    <Stack screenOptions={{ headerShown: false }} />
+                    <Toaster hapticFeedback />
+                </DrizzleProvider>
+            </Suspense>
+        );
+    };
 
     return (
-        <SafeAreaProvider>
-            <Stack screenOptions={{ headerShown: false }} />
-            <Toaster hapticFeedback />
-        </SafeAreaProvider>
-    );
-}
-
-export default function RootLayout() {
-    return (
-        <Suspense fallback={<ActivityIndicator size={"large"} />}>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-                <RootContent />
-            </GestureHandlerRootView>
-        </Suspense>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <SafeAreaProvider>{renderContent()}</SafeAreaProvider>
+        </GestureHandlerRootView>
     );
 }
 
@@ -53,7 +65,3 @@ const fonts = {
 
 // Sentry.init({ dsn: process.env.EXPO_PUBLIC_SENTRY_DSN, debug: __DEV__ });
 // export default Sentry.wrap(RootLayout);
-//  <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-//  <PostHogProvider client={posthog}>
-//  </PostHogProvider>
-//  </ClerkProvider>

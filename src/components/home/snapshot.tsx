@@ -1,5 +1,5 @@
+import { WorkoutPlanWithDays } from "@/types/types";
 import { NavLink } from "@/components/ui/interactive";
-import { WorkoutPlanWithDays } from "@/store/use-static-store";
 import { Card, Div, H3, P, Row } from "@/components/ui/display";
 
 interface SnapshotProp {

@@ -1,12 +1,11 @@
 import { z } from "zod";
 import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import { exerciseSchema } from "@/db/zod";
-import { useUser } from "@/hooks/use-user";
 import { toast } from "react-native-sonner";
 import { DAY_ORDER } from "@/constants/data";
+import { useAppData } from "@/hooks/use-app-data";
 import { addExercise } from "@/server/exercise";
-import { ActivityIndicator } from "react-native";
-import React, { useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/interactive";
 import { HeroPill } from "@/components/add/hero-pill";
 import { usePlanStore } from "@/store/use-plan-store";
@@ -16,6 +15,7 @@ import { SectionTitle } from "@/components/add/section-title";
 import { PlanCarousel } from "@/components/plans/plan-carousel";
 import { ErrorToast } from "@/components/add/add-screen-components";
 import { useForm, FieldErrors, FieldValues } from "react-hook-form";
+import { ErrorScreen, LoadingScreen } from "@/components/ui/screen-ui";
 import { Badge, Card, Div, H1, H2, P, Row, Screen } from "@/components/ui/display";
 import { ExerciseNameField, TypeField, VariantField, DayAssignmentField, SetsAndRepsFields, DurationField, UnitAndValueField } from "@/components/exercise/exercise-form-fields";
 
@@ -23,13 +23,16 @@ type AddExerciseValues = z.infer<typeof exerciseSchema>;
 
 export default function AddExerciseScreen() {
     const router = useRouter();
-    const { user, isLoading } = useUser();
-    const selectedPlanId = usePlanStore((state) => state.selectedPlanId);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { user, enrichedPlans, isLoading } = useAppData({ includePlanDetails: true, includeWorkoutHistory: true });
     const setSelectedPlanId = usePlanStore((state) => state.setSelectedPlanId);
     const syncSelectedPlan = usePlanStore((state) => state.syncSelectedPlan);
+    const selectedPlanId = usePlanStore((state) => state.selectedPlanId);
+    const activePlan = enrichedPlans.find((plan) => plan.localId === selectedPlanId) ?? enrichedPlans[0] ?? null;
 
-    const plans = useMemo(() => user?.plans ?? [], [user?.plans]);
-    const planIds = useMemo(() => plans.map((plan) => plan.localId).join("|"), [plans]);
+    useEffect(() => {
+        if (enrichedPlans) syncSelectedPlan(enrichedPlans.map((plan) => plan.localId));
+    }, [enrichedPlans, syncSelectedPlan]);
 
     const { control, handleSubmit, watch, resetField, setValue, getValues } = useForm<AddExerciseValues>({
         resolver: zodResolver(exerciseSchema),
@@ -42,6 +45,7 @@ export default function AddExerciseScreen() {
     const selectedVariant = watch("variant");
     const exerciseName = watch("name");
     const isCardio = selectedType === "Cardio";
+    const hasSelectedType = Boolean(selectedType);
 
     useEffect(() => {
         if (!selectedType) return;
@@ -58,34 +62,9 @@ export default function AddExerciseScreen() {
         }
     }, [getValues, isCardio, resetField, selectedType, setValue]);
 
-    useEffect(() => {
-        syncSelectedPlan(plans.map((plan) => plan.localId));
-    }, [planIds, plans, syncSelectedPlan]);
-
-    if (isLoading) {
-        return (
-            <Screen className="items-center justify-center">
-                <ActivityIndicator size="large" />
-            </Screen>
-        );
-    }
-
-    if (!user) {
-        return (
-            <Screen className="items-center justify-center px-6">
-                <P className="text-muted-foreground text-center">User not found.</P>
-            </Screen>
-        );
-    }
-
-    const plan = plans.find((item) => item.localId === selectedPlanId) ?? plans[0];
-    if (!plan) {
-        return (
-            <Screen className="items-center justify-center px-6">
-                <P className="text-muted-foreground text-center">Create a workout plan before adding exercises.</P>
-            </Screen>
-        );
-    }
+    if (isLoading) return <LoadingScreen />;
+    if (!user) return <ErrorScreen message="User not found." />;
+    if (!activePlan) return <ErrorScreen message="Create a workout plan before adding exercises." />;
 
     const onInvalid = (errors: FieldErrors<FieldValues>) => {
         const errorEntries = Object.entries(errors).filter(([_, error]) => error?.message);
@@ -93,16 +72,20 @@ export default function AddExerciseScreen() {
     };
 
     async function registerEx(data: AddExerciseValues) {
+        if (isSubmitting) return;
         const { workoutDays, ...exercises } = data;
 
+        if (!user) return;
+
         const payload = {
-            userId: user?.localId ?? "user-1",
-            planId: plan.localId,
+            userId: user?.localId,
+            planId: activePlan.localId,
             exercise: exercises as any,
             workoutDays: workoutDays as Weekday[],
         };
 
         try {
+            setIsSubmitting(true);
             const request = addExercise(payload).then((result) => {
                 if (!result.success) throw new Error(String(result.error));
                 return result;
@@ -118,10 +101,10 @@ export default function AddExerciseScreen() {
             router.replace("/(tabs)/home");
         } catch (error) {
             console.error(error);
+        } finally {
+            setIsSubmitting(false);
         }
     }
-
-    const hasSelectedType = Boolean(selectedType);
 
     return (
         <Screen className="gap-6 pb-36">
@@ -146,12 +129,12 @@ export default function AddExerciseScreen() {
                 </Row>
                 <P className="text-white/75">Create a movement, shape its workload, and slot it into your weekly plan with a cleaner, coach-like structure.</P>
                 <Row className="gap-3">
-                    <HeroPill label="Plan" value={plan.split} />
-                    <HeroPill label="Days" value={`${plan.workoutDaysPerWeek}/week`} />
+                    <HeroPill label="Plan" value={activePlan.split} />
+                    <HeroPill label="Days" value={`${activePlan.days?.length ?? 0}/week`} />
                 </Row>
             </Card>
 
-            <PlanCarousel plans={plans} selectedPlanId={plan.localId} onSelect={setSelectedPlanId} title="Destination Plan" subtitle="Pick the plan that should receive this movement before you save it." />
+            <PlanCarousel plans={enrichedPlans as any} selectedPlanId={activePlan.localId} onSelect={setSelectedPlanId} title="Destination Plan" subtitle="Pick the plan that should receive this movement before you save it." />
 
             <Card className="gap-5">
                 <Row className="items-start gap-3">
@@ -168,21 +151,23 @@ export default function AddExerciseScreen() {
             </Card>
 
             <Card className="gap-4">
-                <Row>
+                <Row className="items-start">
                     <SectionTitle
                         eyebrow="Metrics"
                         title="Define the training target"
                         note={!hasSelectedType ? "Choose a type first to unlock the right workload fields." : isCardio ? "Use time and distance for conditioning work." : "Use sets, reps, and weight for strength work."}
                     />
-                    <Badge variant={!hasSelectedType ? "outline" : isCardio ? "secondary" : "primary"}>+ {!hasSelectedType ? "Choose type" : isCardio ? "Endurance" : "Strength"}+ </Badge>
                 </Row>
+                <Badge className="self-start" variant={!hasSelectedType ? "outline" : isCardio ? "secondary" : "primary"}>
+                    + {!hasSelectedType ? "Choose type" : isCardio ? "Endurance" : "Strength"}+{" "}
+                </Badge>
                 {hasSelectedType ? isCardio ? <DurationField control={control} /> : <SetsAndRepsFields control={control} /> : null}
                 {hasSelectedType ? <UnitAndValueField control={control} isCardio={isCardio} /> : null}
             </Card>
 
-            <Card variant="muted">
+            <Card variant="muted" className="gap-4">
                 <SectionTitle eyebrow="Preview" title="Routine snapshot" note="A quick read on how this movement will present once it lands in the plan." />
-                <Div className="bg-card gap-3 rounded-3xl">
+                <Div className="gap-3 rounded-3xl">
                     <Row className="items-start">
                         <Div className="flex-1 gap-1">
                             <P className="text-base">{exerciseName?.trim() || "Unnamed movement"}</P>
@@ -193,7 +178,7 @@ export default function AddExerciseScreen() {
                         <Badge variant={isCardio ? "secondary" : "outline"}>{selectedUnit || (isCardio ? "km" : "kg")}</Badge>
                     </Row>
 
-                    <Div className="row flex-wrap justify-between gap-4">
+                    <Div className="row flex-wrap gap-4">
                         {selectedDays.length ? (
                             [...selectedDays]
                                 .sort((a, b) => DAY_ORDER[a as Weekday] - DAY_ORDER[b as Weekday])
@@ -216,7 +201,9 @@ export default function AddExerciseScreen() {
                 <P className="text-muted-foreground">Use specific names like &quot;Incline Dumbbell Press&quot; or &quot;Treadmill Tempo Run&quot; so logging later feels immediate and precise.</P>
             </Card>
 
-            <Button onPress={handleSubmit(registerEx, onInvalid)}>Add To Routine</Button>
+            <Button onPress={handleSubmit(registerEx, onInvalid)} disabled={isSubmitting}>
+                {isSubmitting ? "Adding..." : "Add To Routine"}
+            </Button>
         </Screen>
     );
 }

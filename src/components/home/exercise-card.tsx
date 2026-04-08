@@ -1,15 +1,18 @@
 import { cn } from "@/lib/utils";
+import { usePlan } from "@/hooks/use-plan";
+import { ExerciseLog } from "@/types/model";
 import { toast } from "react-native-sonner";
-import React, { useEffect, useState } from "react";
+import { ExerciseWithLogs } from "@/types/types";
 import { getWeekdayName } from "@/lib/helper-functions";
+import React, { memo, useEffect, useState } from "react";
+import { useWorkoutLogs } from "@/hooks/use-workout-logs";
 import { Button, Input } from "@/components/ui/interactive";
-import { ExerciseWithLogs } from "@/store/use-static-store";
 import { ChevronDown, ChevronUp } from "lucide-react-native";
 import { calculateSuggestedLoad, logExerciseSet } from "@/server/workout";
 import { Badge, Card, Div, Field, H3, P, Row } from "@/components/ui/display";
 
 interface CardProp {
-    logs: { id: string; exerciseId: string; reps: number | null; weight: number | null; duration: number | null; distance: number | null; completed: boolean; date: string }[];
+    logs: ExerciseLog[];
     userId: string;
     onPress: () => void;
     expandedId: string | null;
@@ -17,7 +20,10 @@ interface CardProp {
     selectedDayName: Weekday;
 }
 
-export default function ExerciseCard({ userId, exercise, logs, onPress, expandedId, selectedDayName }: CardProp) {
+function ExerciseCard({ userId, exercise, logs, onPress, expandedId, selectedDayName }: CardProp) {
+    const { activePlan } = usePlan();
+    const {todaysLogs} = useWorkoutLogs()
+    
     const isExpanded = expandedId === exercise.localId;
     const isReadOnly = selectedDayName !== getWeekdayName();
 
@@ -58,7 +64,7 @@ export default function ExerciseCard({ userId, exercise, logs, onPress, expanded
         };
 
         try {
-            await logExerciseSet({ userId, exerciseId: exercise.localId, ...payload });
+            await logExerciseSet({ userId, exerciseId: exercise.localId, ...payload, activePlan, todaysLogs });
             toast.success("Set logged!");
         } catch (error: any) {
             console.error(error);
@@ -81,7 +87,7 @@ export default function ExerciseCard({ userId, exercise, logs, onPress, expanded
     };
 
     return (
-        <Card>
+        <Card className="p-0">
             <MainButton onPress={onPress} exercise={exercise} completed={completed} completedSets={completedSets} targetSets={targetSets} targetSummary={displayMetrics.summary} isExpanded={isExpanded} />
 
             {isExpanded && (
@@ -173,6 +179,8 @@ function WorkoutProgress({ completed, progressPercent }: Pick<SubComponentProps,
         </Div>
     );
 }
+
+export default memo(ExerciseCard);
 
 function MetricChips({ bestAverage, pacing, suggestedLoad, exercise }: Pick<SubComponentProps, "bestAverage" | "pacing" | "suggestedLoad" | "exercise">) {
     return (

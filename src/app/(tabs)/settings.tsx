@@ -1,30 +1,27 @@
 import { useRouter } from "expo-router";
-import { useEffect, useMemo } from "react";
-import { useUser } from "@/hooks/use-user";
 import { Alert, Image } from "react-native";
+import { useEffect, useState } from "react";
+import { useAppData } from "@/hooks/use-app-data";
+import { resetLocalUserData } from "@/server/workout";
 import { usePlanStore } from "@/store/use-plan-store";
-import { useStaticStore } from "@/store/use-static-store";
 import { Button, NavLink } from "@/components/ui/interactive";
 import { PlanCarousel } from "@/components/plans/plan-carousel";
-import { calculateStreak, resetLocalUserData } from "@/server/workout";
 import { Card, Div, H1, H3, P, Row, Screen } from "@/components/ui/display";
 
 export default function Settings() {
     const router = useRouter();
-    const { user } = useUser();
+    const [isResetting, setIsResetting] = useState(false);
+    const { user, enrichedPlans: plans } = useAppData({ includePlanDetails: true, includeWorkoutHistory: true });
     const selectedPlanId = usePlanStore((state) => state.selectedPlanId);
     const setSelectedPlanId = usePlanStore((state) => state.setSelectedPlanId);
     const syncSelectedPlan = usePlanStore((state) => state.syncSelectedPlan);
-    const resetStore = useStaticStore((state) => state.resetToInitial);
 
-    const plans = useMemo(() => user?.plans ?? [], [user?.plans]);
-    const planIds = plans.map((plan) => plan.localId).join("|");
+    const planIds = (plans ?? []).map((plan) => plan.localId).join("|");
     useEffect(() => {
-        syncSelectedPlan(plans.map((plan) => plan.localId));
+        if (plans) syncSelectedPlan(plans.map((plan) => plan.localId));
     }, [planIds, plans, syncSelectedPlan]);
 
-    const activePlan = plans.find((plan) => plan.localId === selectedPlanId) ?? plans[0];
-    const streak = calculateStreak(user?.sessions ?? []);
+    const activePlan = (plans ?? []).find((plan) => plan.localId === selectedPlanId) ?? plans?.[0];
 
     return (
         <Screen className="gap-6 pb-36">
@@ -37,21 +34,32 @@ export default function Settings() {
                 <P className="text-muted-foreground text-sm uppercase">Dev Profile</P>
                 <Row className="items-end">
                     <Row className="items-end gap-4">
-                        <Image className="size-14 rounded-full" source={user?.profile ? { uri: user.profile } : require("../../../assets/images/profile.jpg")} />
+                        <Image
+                            className="size-14 rounded-full"
+                            source={user?.profile ? { uri: user.profile } : require("../../../assets/images/profile.jpg")}
+                        />
                         <Div className="justify-start">
                             <H3>{user?.name}</H3>
                         </Div>
                     </Row>
-                    <P className="text-muted-foreground text-sm">Current streak: {streak.current} days</P>
+                    <P className="text-muted-foreground text-sm">
+                        Current streak: {user?.currentStreak ?? 0} day{(user?.currentStreak ?? 0) > 1 ? "s" : ""}
+                    </P>
                 </Row>
             </Card>
 
-            <PlanCarousel plans={plans} selectedPlanId={activePlan?.localId ?? null} onSelect={setSelectedPlanId} title="Plan library" subtitle="Keep an eye on which plan is active before you edit or add new movements." />
+            <PlanCarousel
+                plans={plans as any}
+                selectedPlanId={activePlan?.localId ?? null}
+                onSelect={setSelectedPlanId}
+                title="Plan library"
+                subtitle="Keep an eye on which plan is active before you edit or add new movements."
+            />
 
             <Card className="gap-2">
                 <P className="text-muted-foreground text-sm uppercase">Plan</P>
                 <H3>{activePlan?.split ?? "No plan yet"}</H3>
-                <P className="text-muted-foreground text-sm">{plans.length} saved plans on this device.</P>
+                <P className="text-muted-foreground text-sm">{(plans ?? []).length} saved plans on this device.</P>
 
                 <NavLink href={"/plan-editor"} className="mt-2" variant={"outline"} size={"lg"}>
                     Edit selected plan
@@ -64,6 +72,7 @@ export default function Settings() {
                 <Button
                     variant="outline"
                     className="mt-2"
+                    disabled={isResetting}
                     onPress={() =>
                         Alert.alert("Reset local data", "This clears your on-device workout profile and history for the local dev account.", [
                             { text: "Cancel", style: "cancel" },
@@ -71,18 +80,24 @@ export default function Settings() {
                                 text: "Reset",
                                 style: "destructive",
                                 onPress: async () => {
-                                    await resetLocalUserData();
-                                    router.replace("/onboarding");
+                                    if (isResetting) return;
+                                    setIsResetting(true);
+                                    try {
+                                        await resetLocalUserData();
+                                        router.replace("/onboarding");
+                                    } finally {
+                                        setIsResetting(false);
+                                    }
                                 },
                             },
                         ])
                     }>
-                    Reset local data
+                    {isResetting ? "Resetting..." : "Reset local data"}
                 </Button>
                 <Button
                     variant={"destructive"}
                     onPress={async () => {
-                        resetStore();
+                        // resetStore();
                         router.replace("/(tabs)/home");
                     }}>
                     Reload demo data

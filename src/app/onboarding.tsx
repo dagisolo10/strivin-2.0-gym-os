@@ -27,10 +27,10 @@ type OnboardingFormValues = z.infer<typeof onboardingSchema>;
 export default function Onboarding() {
     const router = useRouter();
     const [step, setStep] = useState(0);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const translateY = useSharedValue(0);
 
     const updateField = useOnboardingStore((state) => state.updateField);
-    const resetStore = useOnboardingStore((state) => state.reset);
 
     const storedName = useOnboardingStore((state) => state.name);
     const storedSplit = useOnboardingStore((state) => state.split);
@@ -75,13 +75,13 @@ export default function Onboarding() {
         const currentValues = methods.getValues();
 
         if (step === TOTAL_STEPS) {
+            if (isSubmitting) return;
             try {
+                setIsSubmitting(true);
                 await registerUser({
                     name: currentValues.name,
                     split: currentValues.split as WorkoutSplit,
-                    goal: currentValues.goal as Goal | undefined,
-                    sessionLength: currentValues.sessionLength,
-                    fitnessLevel: currentValues.fitnessLevel as FitnessLevel | undefined,
+                    workoutDays: currentValues.workoutDays as Weekday[],
                     exercises: currentValues.exercises?.map((exercise) => ({
                         ...exercise,
                         workoutDays: exercise.workoutDays as Weekday[],
@@ -89,13 +89,16 @@ export default function Onboarding() {
                         type: exercise.type as ExerciseType,
                         variant: exercise.variant as ExerciseVariant,
                     })),
-                    workoutDays: currentValues.workoutDays as Weekday[],
+                    goal: currentValues.goal as Goal | null,
+                    sessionLength: currentValues.sessionLength,
+                    fitnessLevel: currentValues.fitnessLevel as FitnessLevel | null,
                     profile: currentValues.profile || null,
                 });
-                resetStore();
                 router.replace("/(tabs)/home");
             } catch (error) {
                 console.error("Failed to save onboarding data:", error);
+            } finally {
+                setIsSubmitting(false);
             }
         } else {
             (Object.keys(currentValues) as (keyof OnboardingFormValues)[]).forEach((key) => updateField(key, currentValues[key]));
@@ -155,8 +158,8 @@ export default function Onboarding() {
                                 Back
                             </Button>
                         ) : null}
-                        <Button variant={step === TOTAL_STEPS ? "success" : "primary"} onPress={nextStep} className={cn(step === 0 ? "w-full" : "flex-1")}>
-                            {step === 0 ? "Get Started" : step === TOTAL_STEPS ? "Go to Dashboard" : "Continue"}
+                        <Button variant={step === TOTAL_STEPS ? "success" : "primary"} onPress={nextStep} className={cn(step === 0 ? "w-full" : "flex-1")} disabled={isSubmitting}>
+                            {step === 0 ? "Get Started" : step === TOTAL_STEPS ? (isSubmitting ? "Saving..." : "Go to Dashboard") : "Continue"}
                         </Button>
                     </Div>
                 </KeyboardAvoidingView>

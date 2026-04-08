@@ -2,17 +2,17 @@ import { z } from "zod";
 import { cn } from "@/lib/utils";
 import { Alert } from "react-native";
 import { useRouter } from "expo-router";
-import { useEffect, useMemo } from "react";
-import { useUser } from "@/hooks/use-user";
 import { toast } from "react-native-sonner";
+import { useEffect, useState } from "react";
+import { useAppData } from "@/hooks/use-app-data";
 import { Controller, useForm } from "react-hook-form";
 import { usePlanStore } from "@/store/use-plan-store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PlanCarousel } from "@/components/plans/plan-carousel";
 import { Button, Input, NavLink } from "@/components/ui/interactive";
 import { deleteWorkoutPlan, saveWorkoutPlan, ExerciseInput } from "@/server/plan";
-import { FITNESS_LEVELS, GOALS, weekdays, WORKOUT_SPLIT } from "@/constants/data";
 import { Badge, Card, Div, H1, H2, Label, P, Row, Screen } from "@/components/ui/display";
+import { FITNESS_LEVELS, GOALS, SESSION_LENGTHS, weekdays, WORKOUT_SPLIT } from "@/constants/data";
 
 const planEditorSchema = z.object({
     split: z.string().trim().min(1, "Split name is required"),
@@ -24,28 +24,25 @@ const planEditorSchema = z.object({
 
 type PlanEditorValues = z.infer<typeof planEditorSchema>;
 
-const lengthPresets = [45, 60, 75, 90];
-
 export default function PlanEditorScreen() {
     const router = useRouter();
-    const { user } = useUser();
-    const selectedPlanId = usePlanStore((state) => state.selectedPlanId);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const { user, enrichedPlans: plans, exercises, workoutDays } = useAppData({ includePlanDetails: true, includeWorkoutHistory: true });
     const setSelectedPlanId = usePlanStore((state) => state.setSelectedPlanId);
     const syncSelectedPlan = usePlanStore((state) => state.syncSelectedPlan);
-
-    const plans = useMemo(() => user?.plans ?? [], [user?.plans]);
+    const selectedPlanId = usePlanStore((state) => state.selectedPlanId);
+    const activePlan = plans.find((plan) => plan.localId === selectedPlanId) ?? plans[0] ?? null;
 
     useEffect(() => {
         syncSelectedPlan(plans.map((plan) => plan.localId));
     }, [plans, syncSelectedPlan]);
 
-    const activePlan = plans.find((plan) => plan.localId === selectedPlanId) ?? plans[0];
-
     const methods = useForm<PlanEditorValues>({
         resolver: zodResolver(planEditorSchema),
         defaultValues: {
             split: activePlan?.split ?? "Push Pull Leg",
-            workoutDays: activePlan?.days.map((day) => day.dayName) ?? ["Monday", "Wednesday", "Friday"],
+            workoutDays: workoutDays.map((day) => day.dayName) ?? ["Monday", "Wednesday", "Friday"],
             goal: activePlan?.goal ?? "Hypertrophy",
             sessionLength: 60,
             fitnessLevel: activePlan?.fitnessLevel ?? "Beginner",
@@ -56,30 +53,29 @@ export default function PlanEditorScreen() {
     useEffect(() => {
         resetForm({
             split: activePlan?.split ?? "Push Pull Leg",
-            workoutDays: activePlan?.days.map((day) => day.dayName) ?? ["Monday", "Wednesday", "Friday"],
+            workoutDays: workoutDays.map((day) => day.dayName) ?? ["Monday", "Wednesday", "Friday"],
             goal: activePlan?.goal ?? "Hypertrophy",
             sessionLength: 60,
             fitnessLevel: activePlan?.fitnessLevel ?? "Beginner",
         });
-    }, [activePlan, resetForm]);
+    }, [activePlan?.fitnessLevel, activePlan?.goal, activePlan?.split, resetForm, workoutDays]);
 
     if (!user) {
         return (
             <Screen className="items-center justify-center gap-4 px-6">
                 <H2 className="text-center">Finish your setup to start building plans.</H2>
-                <Button className="h-14 rounded-2xl" onPress={() => router.replace("/onboarding")}>
-                    Open onboarding
-                </Button>
+                <Button onPress={() => router.replace("/onboarding")}>Open onboarding</Button>
             </Screen>
         );
     }
 
-    const exercisesForPlan: ExerciseInput[] =
-        activePlan?.days.flatMap((day) =>
-            day.exercises.map((exercise) => ({
+    const exercisesForPlan: ExerciseInput[] = workoutDays.flatMap((day) => {
+        return exercises
+            .filter((exercise) => exercise.unit !== null)
+            .map((exercise) => ({
                 name: exercise.name,
                 workoutDays: [day.dayName],
-                unit: exercise.unit,
+                unit: exercise.unit as Unit,
                 sets: exercise.sets ?? undefined,
                 reps: exercise.reps ?? undefined,
                 weight: exercise.weight ?? undefined,
@@ -87,34 +83,40 @@ export default function PlanEditorScreen() {
                 duration: exercise.duration ?? undefined,
                 type: exercise.type,
                 variant: exercise.variant,
-            })),
-        ) ?? [];
+            }));
+    });
 
     const savePlan = async (values: PlanEditorValues, createNew = false) => {
-        const request = saveWorkoutPlan({
-            userId: user.localId,
-            planId: createNew ? undefined : activePlan?.localId,
-            split: values.split as WorkoutSplit,
-            workoutDays: values.workoutDays as Weekday[],
-            goal: values.goal as Goal | undefined,
-            sessionLength: values.sessionLength,
-            fitnessLevel: values.fitnessLevel as FitnessLevel | undefined,
-            exercises: exercisesForPlan,
-        }).then((result) => {
-            if (!result.success) throw new Error(result.error);
-            return result;
-        });
+        if (isSubmitting) return;
+        setIsSubmitting(true);
+        try {
+            const request = saveWorkoutPlan({
+                userId: user.localId,
+                planId: createNew ? undefined : activePlan?.localId,
+                split: values.split as WorkoutSplit,
+                workoutDays: values.workoutDays as Weekday[],
+                goal: values.goal as Goal | undefined,
+                sessionLength: values.sessionLength,
+                fitnessLevel: values.fitnessLevel as FitnessLevel | undefined,
+                exercises: exercisesForPlan as any,
+            }).then((result) => {
+                if (!result.success) throw new Error(result.error);
+                return result;
+            });
 
-        toast.promise(request, {
-            loading: createNew ? "Creating plan..." : "Saving plan...",
-            success: createNew ? "New plan created" : "Plan updated",
-            error: createNew ? "Could not create plan" : "Could not update plan",
-        });
+            toast.promise(request, {
+                loading: createNew ? "Creating plan..." : "Saving plan...",
+                success: createNew ? "New plan created" : "Plan updated",
+                error: createNew ? "Could not create plan" : "Could not update plan",
+            });
 
-        const result = await request;
-        if (result.success) {
-            setSelectedPlanId(result.planId);
-            router.back();
+            const result = await request;
+            if (result.success) {
+                setSelectedPlanId(result.planId);
+                router.back();
+            }
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -125,15 +127,26 @@ export default function PlanEditorScreen() {
             <Card variant={"accent"} className="items-start gap-4">
                 <Div className="w-full gap-2">
                     <H2 className="text-white">Shape your training library</H2>
-                    <P className="max-w-[320px] text-white/85">Edit the selected plan without jumping back into onboarding, or spin up a second version for a new phase.</P>
+                    <P className="max-w-[320px] text-white/85">
+                        Edit the selected plan without jumping back into onboarding, or spin up a second version for a new phase.
+                    </P>
                 </Div>
                 <Row className="gap-3">
-                    <EditorPill label="Saved plans" value={`${plans.length}`} />
-                    <EditorPill label="Active moves" value={`${activePlan?.days.reduce((sum, day) => sum + day.exercises.length, 0) ?? 0}`} />
+                    <EditorPill label="Saved plans" value={`${(plans ?? []).length}`} />
+                    <EditorPill
+                        label="Active moves"
+                        value={`${activePlan?.days.reduce((sum: number, day: any) => sum + (day.exercises?.length ?? 0), 0) ?? 0}`}
+                    />
                 </Row>
             </Card>
 
-            <PlanCarousel plans={plans} selectedPlanId={activePlan?.localId ?? null} onSelect={setSelectedPlanId} title="Plan carousel" subtitle="Choose the plan you want to refine before making changes." />
+            <PlanCarousel
+                plans={plans}
+                selectedPlanId={activePlan?.localId ?? null}
+                onSelect={setSelectedPlanId}
+                title="Plan carousel"
+                subtitle="Choose the plan you want to refine before making changes."
+            />
 
             <Card className="gap-5">
                 <SectionTitle eyebrow="Structure" title="Plan identity" note="Set the split, goal, and cadence that define this cycle." />
@@ -189,7 +202,11 @@ export default function PlanEditorScreen() {
             </Card>
 
             <Card className="gap-5">
-                <SectionTitle eyebrow="Performance" title="Training profile" note="Tune the intent of the plan so the rest of the app presents the right cues." />
+                <SectionTitle
+                    eyebrow="Performance"
+                    title="Training profile"
+                    note="Tune the intent of the plan so the rest of the app presents the right cues."
+                />
 
                 <Controller
                     control={methods.control}
@@ -220,7 +237,7 @@ export default function PlanEditorScreen() {
                         <Div className="gap-3">
                             <P className="text-sm">Session length</P>
                             <Div className="row flex-wrap gap-2">
-                                {lengthPresets.map((length) => (
+                                {SESSION_LENGTHS.map((length) => (
                                     <Button
                                         key={length}
                                         variant={value === length ? "secondary" : "outline"}
@@ -243,7 +260,12 @@ export default function PlanEditorScreen() {
                             <P className="text-sm">Fitness level</P>
                             <Div className="row flex-wrap gap-2">
                                 {FITNESS_LEVELS.map((level) => (
-                                    <Button key={level} variant={value === level ? "secondary" : "outline"} className="flex-1 px-2" textClassName={value === level ? "text-background" : "text-muted-foreground"} onPress={() => onChange(level)}>
+                                    <Button
+                                        key={level}
+                                        variant={value === level ? "secondary" : "outline"}
+                                        className="flex-1 px-2"
+                                        textClassName={value === level ? "text-background" : "text-muted-foreground"}
+                                        onPress={() => onChange(level)}>
                                         {level}
                                     </Button>
                                 ))}
@@ -254,17 +276,23 @@ export default function PlanEditorScreen() {
             </Card>
 
             <Card className="gap-3">
-                <SectionTitle eyebrow="Next step" title="Exercise management" note="This editor handles plan structure. Use the Add screen to create or expand the movement library for the active plan." />
+                <SectionTitle
+                    eyebrow="Next step"
+                    title="Exercise management"
+                    note="This editor handles plan structure. Use the Add screen to create or expand the movement library for the active plan."
+                />
 
                 <NavLink href={"/(tabs)/add"} variant={"outline"}>
                     Open Add Screen
                 </NavLink>
             </Card>
 
-            <Button onPress={methods.handleSubmit((values) => savePlan(values, false))}>Save Changes</Button>
+            <Button onPress={methods.handleSubmit((values) => savePlan(values, false))} disabled={isSubmitting}>
+                {isSubmitting ? "Saving..." : "Save Changes"}
+            </Button>
 
-            <Button variant="outline" onPress={methods.handleSubmit((values) => savePlan(values, true))}>
-                Save As New Plan
+            <Button variant="outline" onPress={methods.handleSubmit((values) => savePlan(values, true))} disabled={isSubmitting}>
+                {isSubmitting ? "Saving..." : "Save As New Plan"}
             </Button>
 
             {activePlan && plans.length > 1 ? (
@@ -277,18 +305,22 @@ export default function PlanEditorScreen() {
                                 text: "Delete",
                                 style: "destructive",
                                 onPress: async () => {
+                                    if (isDeleting) return;
+                                    setIsDeleting(true);
                                     const result = await deleteWorkoutPlan(user.localId, activePlan.localId);
                                     if (!result.success) {
                                         toast.error("Could not delete plan");
+                                        setIsDeleting(false);
                                         return;
                                     }
                                     toast.success("Plan deleted");
+                                    setIsDeleting(false);
                                     router.back();
                                 },
                             },
                         ])
                     }>
-                    Delete Selected Plan
+                    {isDeleting ? "Deleting..." : "Delete Selected Plan"}
                 </Button>
             ) : null}
         </Screen>

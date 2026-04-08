@@ -26,5 +26,15 @@ export const useOnboardingStore = create<OnboardingState>((set) => ({
     profile: null,
 
     updateField: (field, value) => set((state) => ({ ...state, [field]: value })),
-    reset: () => set({ name: "", split: "Push Pull Leg", workoutDays: ["Monday", "Wednesday", "Friday"], goal: "Hypertrophy", exercises: [], sessionLength: 60, fitnessLevel: "Beginner", profile: null }),
+    reset: () =>
+        set({
+            name: "",
+            split: "Push Pull Leg",
+            workoutDays: ["Monday", "Wednesday", "Friday"],
+            exercises: [],
+            goal: "Hypertrophy",
+            sessionLength: 60,
+            fitnessLevel: "Beginner",
+            profile: null,
+        }),
 }));

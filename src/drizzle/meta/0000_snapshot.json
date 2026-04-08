@@ -1,36 +1,43 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "01f52ba7-8d68-48d3-bb76-0b0ea474750b",
+  "id": "7ea10b2e-77de-46e4-9d37-6b9c2dd004f9",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "exercise_logs": {
       "name": "exercise_logs",
       "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
+        "local_id": {
+          "name": "local_id",
+          "type": "text",
           "primaryKey": true,
           "notNull": true,
-          "autoincrement": true
+          "autoincrement": false
+        },
+        "server_id": {
+          "name": "server_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         },
         "user_id": {
           "name": "user_id",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "session_id": {
           "name": "session_id",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "exercise_id": {
           "name": "exercise_id",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -71,11 +78,35 @@
           "autoincrement": false,
           "default": false
         },
-        "date": {
-          "name": "date",
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(CURRENT_TIMESTAMP)"
+        },
+        "sync_status": {
+          "name": "sync_status",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false,
+          "default": "'pending'"
+        },
+        "is_deleted": {
+          "name": "is_deleted",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false,
           "default": "(CURRENT_TIMESTAMP)"
         }
@@ -87,46 +118,61 @@
             "user_id"
           ],
           "isUnique": false
+        },
+        "exercise_logs_session_id_idx": {
+          "name": "exercise_logs_session_id_idx",
+          "columns": [
+            "session_id"
+          ],
+          "isUnique": false
+        },
+        "logs_exercise_session_idx": {
+          "name": "logs_exercise_session_idx",
+          "columns": [
+            "exercise_id",
+            "session_id"
+          ],
+          "isUnique": false
         }
       },
       "foreignKeys": {
-        "exercise_logs_user_id_users_id_fk": {
-          "name": "exercise_logs_user_id_users_id_fk",
+        "exercise_logs_user_id_users_local_id_fk": {
+          "name": "exercise_logs_user_id_users_local_id_fk",
           "tableFrom": "exercise_logs",
           "tableTo": "users",
           "columnsFrom": [
             "user_id"
           ],
           "columnsTo": [
-            "id"
+            "local_id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "exercise_logs_session_id_workout_sessions_id_fk": {
-          "name": "exercise_logs_session_id_workout_sessions_id_fk",
+        "exercise_logs_session_id_workout_sessions_local_id_fk": {
+          "name": "exercise_logs_session_id_workout_sessions_local_id_fk",
           "tableFrom": "exercise_logs",
           "tableTo": "workout_sessions",
           "columnsFrom": [
             "session_id"
           ],
           "columnsTo": [
-            "id"
+            "local_id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "exercise_logs_exercise_id_exercises_id_fk": {
-          "name": "exercise_logs_exercise_id_exercises_id_fk",
+        "exercise_logs_exercise_id_exercises_local_id_fk": {
+          "name": "exercise_logs_exercise_id_exercises_local_id_fk",
           "tableFrom": "exercise_logs",
           "tableTo": "exercises",
           "columnsFrom": [
             "exercise_id"
           ],
           "columnsTo": [
-            "id"
+            "local_id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
@@ -137,30 +183,37 @@
     "exercises": {
       "name": "exercises",
       "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
+        "local_id": {
+          "name": "local_id",
+          "type": "text",
           "primaryKey": true,
           "notNull": true,
-          "autoincrement": true
+          "autoincrement": false
+        },
+        "server_id": {
+          "name": "server_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         },
         "user_id": {
           "name": "user_id",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "plan_id": {
           "name": "plan_id",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "workout_day_id": {
           "name": "workout_day_id",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -228,6 +281,38 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(CURRENT_TIMESTAMP)"
+        },
+        "sync_status": {
+          "name": "sync_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'pending'"
+        },
+        "is_deleted": {
+          "name": "is_deleted",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(CURRENT_TIMESTAMP)"
         }
       },
       "indexes": {
@@ -254,43 +339,43 @@
         }
       },
       "foreignKeys": {
-        "exercises_user_id_users_id_fk": {
-          "name": "exercises_user_id_users_id_fk",
+        "exercises_user_id_users_local_id_fk": {
+          "name": "exercises_user_id_users_local_id_fk",
           "tableFrom": "exercises",
           "tableTo": "users",
           "columnsFrom": [
             "user_id"
           ],
           "columnsTo": [
-            "id"
+            "local_id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "exercises_plan_id_workout_plans_id_fk": {
-          "name": "exercises_plan_id_workout_plans_id_fk",
+        "exercises_plan_id_workout_plans_local_id_fk": {
+          "name": "exercises_plan_id_workout_plans_local_id_fk",
           "tableFrom": "exercises",
           "tableTo": "workout_plans",
           "columnsFrom": [
             "plan_id"
           ],
           "columnsTo": [
-            "id"
+            "local_id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "exercises_workout_day_id_workout_days_id_fk": {
-          "name": "exercises_workout_day_id_workout_days_id_fk",
+        "exercises_workout_day_id_workout_days_local_id_fk": {
+          "name": "exercises_workout_day_id_workout_days_local_id_fk",
           "tableFrom": "exercises",
           "tableTo": "workout_days",
           "columnsFrom": [
             "workout_day_id"
           ],
           "columnsTo": [
-            "id"
+            "local_id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
@@ -301,12 +386,19 @@
     "users": {
       "name": "users",
       "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
+        "local_id": {
+          "name": "local_id",
+          "type": "text",
           "primaryKey": true,
           "notNull": true,
-          "autoincrement": true
+          "autoincrement": false
+        },
+        "server_id": {
+          "name": "server_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         },
         "name": {
           "name": "name",
@@ -322,8 +414,40 @@
           "notNull": false,
           "autoincrement": false
         },
+        "current_streak": {
+          "name": "current_streak",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 0
+        },
+        "longest_streak": {
+          "name": "longest_streak",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 0
+        },
         "created_at": {
           "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(CURRENT_TIMESTAMP)"
+        },
+        "sync_status": {
+          "name": "sync_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'pending'"
+        },
+        "updated_at": {
+          "name": "updated_at",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -340,23 +464,30 @@
     "workout_days": {
       "name": "workout_days",
       "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
+        "local_id": {
+          "name": "local_id",
+          "type": "text",
           "primaryKey": true,
           "notNull": true,
-          "autoincrement": true
+          "autoincrement": false
+        },
+        "server_id": {
+          "name": "server_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         },
         "user_id": {
           "name": "user_id",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "plan_id": {
           "name": "plan_id",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -367,34 +498,81 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(CURRENT_TIMESTAMP)"
+        },
+        "sync_status": {
+          "name": "sync_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'pending'"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(CURRENT_TIMESTAMP)"
+        },
+        "is_deleted": {
+          "name": "is_deleted",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "workout_days_user_id_idx": {
+          "name": "workout_days_user_id_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        },
+        "workout_days_plan_id_idx": {
+          "name": "workout_days_plan_id_idx",
+          "columns": [
+            "plan_id"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
-        "workout_days_user_id_users_id_fk": {
-          "name": "workout_days_user_id_users_id_fk",
+        "workout_days_user_id_users_local_id_fk": {
+          "name": "workout_days_user_id_users_local_id_fk",
           "tableFrom": "workout_days",
           "tableTo": "users",
           "columnsFrom": [
             "user_id"
           ],
           "columnsTo": [
-            "id"
+            "local_id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "workout_days_plan_id_workout_plans_id_fk": {
-          "name": "workout_days_plan_id_workout_plans_id_fk",
+        "workout_days_plan_id_workout_plans_local_id_fk": {
+          "name": "workout_days_plan_id_workout_plans_local_id_fk",
           "tableFrom": "workout_days",
           "tableTo": "workout_plans",
           "columnsFrom": [
             "plan_id"
           ],
           "columnsTo": [
-            "id"
+            "local_id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
@@ -405,16 +583,23 @@
     "workout_plans": {
       "name": "workout_plans",
       "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
+        "local_id": {
+          "name": "local_id",
+          "type": "text",
           "primaryKey": true,
           "notNull": true,
-          "autoincrement": true
+          "autoincrement": false
+        },
+        "server_id": {
+          "name": "server_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         },
         "user_id": {
           "name": "user_id",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -454,21 +639,53 @@
           "notNull": false,
           "autoincrement": false,
           "default": "(CURRENT_TIMESTAMP)"
+        },
+        "sync_status": {
+          "name": "sync_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'pending'"
+        },
+        "is_deleted": {
+          "name": "is_deleted",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(CURRENT_TIMESTAMP)"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "workout_plans_user_id_idx": {
+          "name": "workout_plans_user_id_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
-        "workout_plans_user_id_users_id_fk": {
-          "name": "workout_plans_user_id_users_id_fk",
+        "workout_plans_user_id_users_local_id_fk": {
+          "name": "workout_plans_user_id_users_local_id_fk",
           "tableFrom": "workout_plans",
           "tableTo": "users",
           "columnsFrom": [
             "user_id"
           ],
           "columnsTo": [
-            "id"
+            "local_id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
@@ -479,16 +696,23 @@
     "workout_sessions": {
       "name": "workout_sessions",
       "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
+        "local_id": {
+          "name": "local_id",
+          "type": "text",
           "primaryKey": true,
           "notNull": true,
-          "autoincrement": true
+          "autoincrement": false
+        },
+        "server_id": {
+          "name": "server_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         },
         "user_id": {
           "name": "user_id",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -515,21 +739,69 @@
           "notNull": false,
           "autoincrement": false,
           "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(CURRENT_TIMESTAMP)"
+        },
+        "sync_status": {
+          "name": "sync_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'pending'"
+        },
+        "is_deleted": {
+          "name": "is_deleted",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(CURRENT_TIMESTAMP)"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "workout_sessions_user_id_idx": {
+          "name": "workout_sessions_user_id_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        },
+        "workout_sessions_user_date_idx": {
+          "name": "workout_sessions_user_date_idx",
+          "columns": [
+            "user_id",
+            "date"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
-        "workout_sessions_user_id_users_id_fk": {
-          "name": "workout_sessions_user_id_users_id_fk",
+        "workout_sessions_user_id_users_local_id_fk": {
+          "name": "workout_sessions_user_id_users_local_id_fk",
           "tableFrom": "workout_sessions",
           "tableTo": "users",
           "columnsFrom": [
             "user_id"
           ],
           "columnsTo": [
-            "id"
+            "local_id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },

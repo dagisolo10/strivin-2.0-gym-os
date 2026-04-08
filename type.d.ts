@@ -1,5 +1,6 @@
 import * as schema from "@/db/sqlite";
 import { weekdays } from "@/constants/data";
+import { Exercise, ExerciseLog } from "@/types/model";
 import type { ImageSourcePropType } from "react-native";
 import type { ExpoSQLiteDatabase } from "drizzle-orm/expo-sqlite";
 
@@ -20,4 +21,10 @@ declare global {
     type ExerciseVariant = "Upper" | "Lower" | "Endurance" | "Full Body";
     type Unit = "kg" | "lb" | "km" | "mi" | "sec" | "mins" | "meters" | "reps";
     type WorkoutSplit = "Push Pull Leg" | "Upper Lower" | "Full Body" | "Endurance" | (string & {});
+
+    interface ExerciseWithLogs extends Exercise {
+        logs: ExerciseLog[];
+    }
 }
+
+export {};

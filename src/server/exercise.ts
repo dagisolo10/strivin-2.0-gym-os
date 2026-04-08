@@ -1,6 +1,20 @@
-import { useStaticStore, Exercise } from "@/store/use-static-store";
+import { getDb } from "@/db/client";
+import { enqueueWrite } from "@/db/write-queue";
+import { and, eq } from "drizzle-orm";
+import * as schema from "@/db/sqlite";
+import { randomUUID } from "expo-crypto";
 
-type NewExercise = Omit<Exercise, "id" | "userId" | "planId" | "workoutDayId">;
+interface NewExercise {
+    name: string;
+    unit: Unit;
+    sets?: number;
+    reps?: number;
+    weight?: number;
+    distance?: number;
+    duration?: number;
+    type: ExerciseType;
+    variant: ExerciseVariant;
+}
 
 interface Data {
     userId: string;
@@ -11,28 +25,47 @@ interface Data {
 
 export async function addExercise(data: Data) {
     try {
-        const store = useStaticStore.getState();
-        const plan = store.plans.find((p) => p.localId === data.planId);
-        if (!plan) return { success: false, error: "Plan not found" };
+        const database = getDb();
 
-        for (const day of data.workoutDays) {
-            let workoutDay = store.workoutDays.find((d) => d.planId === plan.localId && d.dayName === day);
+        await enqueueWrite(() =>
+            database.transaction(async (tx) => {
+                const [plan] = await tx.select().from(schema.workoutPlans).where(and(eq(schema.workoutPlans.localId, data.planId), eq(schema.workoutPlans.userId, data.userId))).limit(1);
 
-            if (!workoutDay) {
-                workoutDay = store.createWorkoutDay({
-                    userId: data.userId,
-                    dayName: day,
-                    planId: plan.localId,
-                });
-            }
+                if (!plan) throw new Error("Plan not found");
 
-            store.createExercise({
-                ...data.exercise,
-                userId: data.userId,
-                planId: data.planId,
-                workoutDayId: workoutDay.localId,
-            });
-        }
+                for (const day of data.workoutDays) {
+                    const [existingWorkoutDay] = await tx.select().from(schema.workoutDays).where(and(eq(schema.workoutDays.planId, data.planId), eq(schema.workoutDays.dayName, day))).limit(1);
+                    let workoutDay = existingWorkoutDay;
+
+                    if (!workoutDay) {
+                        const dayId = randomUUID();
+                        await tx.insert(schema.workoutDays).values({
+                            localId: dayId,
+                            userId: data.userId,
+                            planId: data.planId,
+                            dayName: day,
+                        });
+                        workoutDay = { localId: dayId, dayName: day, userId: data.userId, planId: data.planId } as typeof workoutDay;
+                    }
+
+                    await tx.insert(schema.exercises).values({
+                        localId: randomUUID(),
+                        userId: data.userId,
+                        planId: data.planId,
+                        workoutDayId: workoutDay.localId,
+                        name: data.exercise.name,
+                        sets: data.exercise.sets ?? null,
+                        reps: data.exercise.reps ?? null,
+                        weight: data.exercise.weight ?? null,
+                        distance: data.exercise.distance ?? null,
+                        duration: data.exercise.duration ?? null,
+                        unit: data.exercise.unit,
+                        type: data.exercise.type,
+                        variant: data.exercise.variant,
+                    });
+                }
+            }),
+        );
 
         return { success: true };
     } catch (error) {

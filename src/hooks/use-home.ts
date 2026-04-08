@@ -1,31 +1,38 @@
 import { useMemo } from "react";
-import { getDateKey } from "@/lib/helper-functions";
-import { usePlanStore } from "@/store/use-plan-store";
-import { UserWithRelations } from "@/store/use-static-store";
+import { SessionWithRelations } from "@/types/model";
+import { getDateKey, getWeekdayName } from "@/lib/helper-functions";
+import { WorkoutDay, ExerciseLog, WorkoutPlanWithDays } from "@/types/types";
 
-interface UseHomeDataUser extends UserWithRelations {
-    localId: string;
+interface HomeDataOptions {
+    activePlan: WorkoutPlanWithDays | null;
+    workoutDays: WorkoutDay[];
+    sessions: SessionWithRelations[];
+    logs: ExerciseLog[];
 }
 
-export function useHomeData(user: UseHomeDataUser | null | undefined, selectedDayName: Weekday) {
-    const selectedPlanId = usePlanStore((state) => state.selectedPlanId);
-
+export function useHomeData(selectedDayName: Weekday | undefined, { activePlan, workoutDays, sessions, logs }: HomeDataOptions) {
     const todayKey = getDateKey();
+    const dayName = selectedDayName ?? getWeekdayName();
 
-    const plans = user?.plans || [];
-    const plan = plans.find((plan) => plan.localId === selectedPlanId) ?? plans[0];
+    const { workoutDay, todaysExercises, totalSets, totalExercises, todaysSession, todaysLogs, todaysLogsByExerciseId, progress } = useMemo(() => {
+        const workoutDay = workoutDays.find((day) => day.dayName === dayName);
+        const todaysExercises = activePlan?.days?.find((day) => day.localId === workoutDay?.localId)?.exercises ?? [];
+        const todaysSession = sessions.find((session) => session.date === todayKey);
+        const todaysLogs = logs.filter((log) => log.sessionId === todaysSession?.localId);
+        const todaysLogsByExerciseId = todaysLogs.reduce<Record<string, ExerciseLog[]>>((accumulator, log) => {
+            accumulator[log.exerciseId] = [...(accumulator[log.exerciseId] ?? []), log];
+            return accumulator;
+        }, {});
+        const totalSets = todaysExercises.reduce((sum, exercise) => sum + (exercise.sets ?? 1), 0);
+        const totalExercises = activePlan?.days?.reduce((sum, day) => sum + (day.exercises?.length ?? 0), 0) ?? 0;
+        const completedSets = todaysLogs.length;
+        const progress = totalSets ? Math.round((completedSets / totalSets) * 100) : 0;
 
-    const workoutDay = plan?.days?.find((day) => day.dayName === selectedDayName);
-    const workoutDayId = workoutDay?.localId;
+        return { workoutDay, todaysExercises, totalSets, totalExercises, todaysSession, todaysLogs, todaysLogsByExerciseId, progress };
+    }, [activePlan, dayName, logs, sessions, todayKey, workoutDays]);
 
-    const exercises = useMemo(() => {
-        if (workoutDayId === undefined || workoutDayId === null) return [];
-        return workoutDay?.exercises || [];
-    }, [workoutDayId, workoutDay]);
-
-    const todaysLogs = useMemo(() => {
-        return user?.sessions?.find((session) => session.date === todayKey)?.logs.map((log) => ({ ...log, exerciseId: log.exercise?.localId })) || [];
-    }, [user?.sessions, todayKey]);
-
-    return { plan, plans, workoutDay, exercises, todaysLogs, todayKey };
+    return {
+        tables: { workoutDay, todaysSession, todaysExercises, todaysLogsByExerciseId },
+        values: { progress, totalExercises, completedSets: todaysLogs.length, totalSets },
+    };
 }

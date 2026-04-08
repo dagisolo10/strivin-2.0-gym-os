@@ -12,7 +12,7 @@ interface ButtonProps extends PressableProps, VariantProps<typeof buttonVariants
     textClassName?: string;
 }
 
-const buttonVariants = cva("flex-row items-center justify-center rounded-2xl px-6", {
+const buttonVariants = cva("flex-row items-center justify-center rounded-2xl px-6 data-disabled:opacity-50", {
     variants: {
         variant: {
             primary: "bg-primary",
@@ -73,7 +73,7 @@ const navLinkTextVariants = {
     link: "text-accent underline",
 };
 
-export const NavLink = ({ href, variant = "link", size = "sm", children, className, textClassName, onPress, component = false, ...props }: ButtonProps & { href: LinkProps["href"]; component?: boolean }) => {
+export const NavLink = ({ href, variant = "link", size = "default", children, className, textClassName, onPress, component = false, ...props }: ButtonProps & { href: LinkProps["href"]; component?: boolean }) => {
     const handlePress = (e: GestureResponderEvent) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         onPress?.(e);

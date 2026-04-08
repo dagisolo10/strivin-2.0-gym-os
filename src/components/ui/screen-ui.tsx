@@ -19,7 +19,8 @@ export function ErrorScreen({ message = "Something went wrong", href = "/", butt
 
 export function LoadingScreen() {
     return (
-        <Screen className="items-center justify-center">
+        <Screen className="row items-center justify-center gap-4">
+            <H2 className="animate-pulse">Loading...</H2>
             <ActivityIndicator size="large" />
         </Screen>
     );

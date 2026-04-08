@@ -1,16 +1,13 @@
-import * as schema from "@/db/sqlite";
-import { useSQLiteContext } from "expo-sqlite";
-import { drizzle } from "drizzle-orm/expo-sqlite";
-import { createContext, ReactNode, useContext, useMemo } from "react";
+import { ReactNode, useContext, createContext } from "react";
 
 const DrizzleContext = createContext<DB | null>(null);
 
-export const DrizzleProvider = ({ children }: { children: ReactNode }) => {
-    const db = useSQLiteContext();
-    const drizzleDB = useMemo(() => drizzle(db, { schema }), [db]);
+interface DrizzleProviderProps {
+    children: ReactNode;
+    db: DB;
+}
 
-    return <DrizzleContext.Provider value={drizzleDB}>{children}</DrizzleContext.Provider>;
-};
+export const DrizzleProvider = ({ children, db }: DrizzleProviderProps) => <DrizzleContext.Provider value={db}>{children}</DrizzleContext.Provider>;
 
 export const useDrizzle = () => {
     const context = useContext(DrizzleContext);

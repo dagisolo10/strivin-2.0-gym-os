@@ -1,5 +1,11 @@
-import { getDateKey } from "@/lib/helper-functions";
-import { useStaticStore } from "@/store/use-static-store";
+import { getDb } from "@/db/client";
+import * as schema from "@/db/sqlite";
+import { randomUUID } from "expo-crypto";
+import { weekdays } from "@/constants/data";
+import { and, eq, inArray } from "drizzle-orm";
+import { enqueueWrite } from "@/db/write-queue";
+import { getDateKey, getWeekdayName, sortWorkoutDays } from "@/lib/helper-functions";
+import { ExerciseLog, WorkoutPlanWithDays, WorkoutSessionWithExerciseLogs } from "@/types/types";
 
 export function calculateSuggestedLoad(targetWeight?: number | null, averageWeight?: number | null, averageReps?: number | null, targetReps?: number | null) {
     if (!targetWeight || !targetReps || !averageReps) return null;
@@ -8,105 +14,266 @@ export function calculateSuggestedLoad(targetWeight?: number | null, averageWeig
     return Math.round(targetWeight);
 }
 
-export function calculateStreak(sessions: { date: string; perfectDay: boolean | null }[]) {
-    const perfectSessions = [...sessions].filter((session) => session.perfectDay).sort((a, b) => (a.date < b.date ? 1 : -1));
-
-    let currentStreak = 0;
-    let longestStreak = 0;
-    let tempStreak = 0;
-    let previousDate: Date | null = null;
-    let streakBroken = false;
-
-    const todayKey = getDateKey();
-    const latestSession = perfectSessions[0];
-    const latestDateKey = latestSession?.date ?? null;
-
-    for (const session of perfectSessions) {
-        const [year, month, day] = session.date.split("-").map(Number);
-        const currentDate = new Date(year, month - 1, day);
-
-        if (!previousDate) {
-            tempStreak = 1;
-        } else {
-            const diffInDays = Math.round((previousDate.getTime() - currentDate.getTime()) / 86_400_000);
-            if (diffInDays <= 1) {
-                tempStreak += 1;
-            } else {
-                streakBroken = true;
-                tempStreak = 1;
-            }
-        }
-
-        if (!streakBroken && latestDateKey === todayKey) {
-            currentStreak = tempStreak;
-        }
-
-        if (tempStreak > longestStreak) longestStreak = tempStreak;
-        previousDate = currentDate;
-    }
-
-    return {
-        current: currentStreak,
-        longest: longestStreak,
-        lastPerfectDate: latestSession?.date ?? null,
-    };
+interface LogData {
+    userId: string;
+    exerciseId: string;
+    reps?: number | null;
+    weight?: number | null;
+    duration?: number | null;
+    distance?: number | null;
+    todaysLogs: ExerciseLog[];
+    activePlan: WorkoutPlanWithDays;
 }
 
-export async function logExerciseSet(data: { userId: string; exerciseId: string; reps?: number; weight?: number; duration?: number; distance?: number }) {
+export async function logExerciseSet(data: LogData) {
+    const db = getDb();
     const dateKey = getDateKey();
     const { userId, exerciseId, reps, weight, duration, distance } = data;
 
     try {
-        const store = useStaticStore.getState();
+        await enqueueWrite(() =>
+            db.transaction(async (tx) => {
+                let session = await tx.query.workoutSessions.findFirst({
+                    where: (fields, { and, eq }) => and(eq(fields.userId, userId), eq(fields.date, dateKey)),
+                });
 
-        // Get or create today's session
-        let session = store.sessions.find((s) => s.userId === userId && s.date === dateKey);
+                let sessionId = session?.localId;
 
-        if (!session) {
-            session = store.createSession({ userId, date: dateKey, sessionLength: null, perfectDay: false });
-        }
+                if (!sessionId) {
+                    const newId = randomUUID();
+                    await tx.insert(schema.workoutSessions).values({
+                        localId: newId,
+                        userId,
+                        date: dateKey,
+                        sessionLength: null,
+                        perfectDay: false,
+                        syncStatus: "pending",
+                        isDeleted: false,
+                    });
 
-        // Create the exercise log
-        store.createLog({
-            userId,
-            sessionId: session.localId,
-            exerciseId,
-            reps: reps ?? null,
-            weight: weight ?? null,
-            duration: duration ?? null,
-            distance: distance ?? null,
-            completed: true,
-            date: dateKey,
-        });
+                    // session = await tx.query.workoutSessions.findFirst({
+                    //     where: (fields, { and, eq }) => and(eq(fields.userId, userId), eq(fields.date, dateKey)),
+                    // });
+                    sessionId = newId;
+                    session = { localId: newId, userId, date: dateKey } as any;
+                }
 
-        console.log("[logExerciseSet] Transaction completed successfully");
+                await tx.insert(schema.exerciseLogs).values({
+                    userId,
+                    sessionId,
+                    exerciseId,
+                    reps: reps ?? null,
+                    weight: weight ?? null,
+                    duration: duration ?? null,
+                    distance: distance ?? null,
+                    completed: true,
+                });
+
+                const sessionWithLogs = { ...session, logs: [...data.todaysLogs, { exerciseId }] } as WorkoutSessionWithExerciseLogs;
+
+                const perfectDay = computePerfectDay(data.activePlan, sessionWithLogs);
+
+                await tx.update(schema.workoutSessions).set({ perfectDay }).where(eq(schema.workoutSessions.localId, sessionId));
+
+                if (perfectDay) await updateStreak(db, data.activePlan);
+            }),
+        );
     } catch (error) {
         console.error("[logExerciseSet] Error:", error);
-
-        if (error instanceof Error) {
-            throw new Error(`Logging failed: ${error.message}`);
-        } else {
-            throw new Error("An unexpected error occurred while saving your set.");
-        }
+        if (error instanceof Error) throw new Error(`Logging failed: ${error.message}`);
+        else throw new Error("An unexpected error occurred while saving your set.");
     }
 }
 
+async function updateStreak(db: DB, activePlan: WorkoutPlanWithDays) {
+    await db.transaction(async (tx) => {
+        const planDays = sortWorkoutDays(activePlan.days.map((day) => day.dayName));
+
+        const prevWeekDay = getPreviousWorkoutDay(planDays);
+
+        if (!prevWeekDay) return;
+
+        const prevSessionDate = getPreviousDateForWeekday(prevWeekDay);
+
+        const [user] = await tx
+            .select({
+                currentStreak: schema.users.currentStreak,
+                longestStreak: schema.users.longestStreak,
+            })
+            .from(schema.users)
+            .where(eq(schema.users.localId, activePlan.userId))
+            .limit(1);
+
+        if (!user) return;
+
+        const [lastPerfectSession] = await tx
+            .select()
+            .from(schema.workoutSessions)
+            .where(
+                and(
+                    eq(schema.workoutSessions.userId, activePlan.userId),
+                    eq(schema.workoutSessions.date, prevSessionDate),
+                    eq(schema.workoutSessions.perfectDay, true),
+                ),
+            )
+            .limit(1);
+
+        if (!lastPerfectSession) {
+            await tx
+                .update(schema.users)
+                .set({
+                    currentStreak: 1,
+                    longestStreak: Math.max(1, user.longestStreak ?? 0),
+                })
+                .where(eq(schema.users.localId, activePlan.userId));
+
+            return;
+        }
+
+        const newStreak = (user.currentStreak ?? 0) + 1;
+
+        await tx
+            .update(schema.users)
+            .set({
+                currentStreak: newStreak,
+                longestStreak: Math.max(newStreak, user.longestStreak ?? 0),
+            })
+            .where(eq(schema.users.localId, activePlan.userId));
+    });
+}
+
+function getPreviousDateForWeekday(prevWeekDay: Weekday): string {
+    const today = new Date();
+
+    const todayIndex = today.getDay();
+    const targetIndex = weekdays.indexOf(prevWeekDay);
+    let diff = todayIndex - targetIndex;
+
+    if (diff <= 0) diff += 7;
+
+    const result = new Date();
+    result.setDate(today.getDate() - diff);
+
+    return getDateKey(result);
+}
+
+function getPreviousWorkoutDay(planDays: Weekday[]) {
+    const index = planDays.indexOf(getWeekdayName());
+
+    return index === -1 ? null : index === 0 ? planDays[planDays.length - 1] : planDays[index - 1];
+}
+
+export function computePerfectDay(activePlan: WorkoutPlanWithDays | null, todaysSession: WorkoutSessionWithExerciseLogs) {
+    if (!activePlan || !todaysSession) return false;
+
+    const workoutDay = activePlan.days.find((day) => day.dayName === getWeekdayName());
+    if (!workoutDay) return false;
+
+    const todaysExercises = workoutDay.exercises;
+
+    const requiredSets = todaysExercises.reduce((sum, ex) => sum + (ex.sets ?? 0), 0);
+
+    const completedSets = todaysSession.logs.length;
+
+    return completedSets >= requiredSets;
+}
+
 export async function resetLocalUserData() {
-    const store = useStaticStore.getState();
-    const localUser = store.users.find((u) => u.localId === store.currentUserId);
+    const database = getDb();
 
-    if (!localUser) return;
+    await enqueueWrite(() =>
+        database.transaction(async (tx) => {
+            const [user] = await tx.select().from(schema.users).limit(1);
+            if (!user) return;
 
-    // Reset the store to initial state
-    store.resetToInitial();
+            const userId = user.localId;
+            const plans = await tx.select().from(schema.workoutPlans).where(eq(schema.workoutPlans.userId, userId));
+            const planIds = plans.map((plan) => plan.localId);
+
+            if (planIds.length > 0) {
+                const workoutDays = await tx.select().from(schema.workoutDays).where(inArray(schema.workoutDays.planId, planIds));
+                const dayIds = workoutDays.map((day) => day.localId);
+
+                if (dayIds.length > 0) {
+                    await tx.delete(schema.exercises).where(inArray(schema.exercises.workoutDayId, dayIds));
+                }
+
+                await tx.delete(schema.workoutDays).where(inArray(schema.workoutDays.planId, planIds));
+            }
+
+            await tx.delete(schema.exerciseLogs).where(eq(schema.exerciseLogs.userId, userId));
+            await tx.delete(schema.workoutSessions).where(eq(schema.workoutSessions.userId, userId));
+            await tx.delete(schema.workoutPlans).where(eq(schema.workoutPlans.userId, userId));
+            await tx.delete(schema.users).where(eq(schema.users.localId, userId));
+        }),
+    );
 }
 
 export async function getRecentLogsForExercise(userId: string, exerciseId: string) {
-    const store = useStaticStore.getState();
-    return store.getLogsForExercise(exerciseId, 6);
+    const database = getDb();
+    const logs = await database
+        .select()
+        .from(schema.exerciseLogs)
+        .where(and(eq(schema.exerciseLogs.userId, userId), eq(schema.exerciseLogs.exerciseId, exerciseId)))
+        .orderBy(schema.exerciseLogs.createdAt)
+        .limit(6);
+    return logs;
 }
 
-export async function getUser() {
-    const store = useStaticStore.getState();
-    return store.getUserWithRelations(store.currentUserId || "user-1");
+export async function getUser(userId: string) {
+    const database = getDb()!;
+    // Get user
+    const [user] = await database.select().from(schema.users).where(eq(schema.users.localId, userId)).limit(1);
+    if (!user) return null;
+
+    // Get user's plans
+    const plans = await database.select().from(schema.workoutPlans).where(eq(schema.workoutPlans.userId, userId));
+
+    // Get user's sessions
+    const sessions = await database.select().from(schema.workoutSessions).where(eq(schema.workoutSessions.userId, userId));
+
+    // Build plans with days and exercises with logs
+    const plansWithDays = await Promise.all(
+        plans.map(async (plan: { localId: string }) => {
+            const days = await database.select().from(schema.workoutDays).where(eq(schema.workoutDays.planId, plan.localId));
+
+            const daysWithExercises = await Promise.all(
+                days.map(async (day: { localId: string }) => {
+                    const exercises = await database.select().from(schema.exercises).where(eq(schema.exercises.workoutDayId, day.localId));
+
+                    const exercisesWithLogs = await Promise.all(
+                        exercises.map(async (exercise: { localId: string }) => {
+                            const logs = await database.select().from(schema.exerciseLogs).where(eq(schema.exerciseLogs.exerciseId, exercise.localId));
+                            return { ...exercise, logs };
+                        }),
+                    );
+
+                    return { ...day, exercises: exercisesWithLogs };
+                }),
+            );
+
+            return { ...plan, days: daysWithExercises };
+        }),
+    );
+
+    // Build sessions with logs and exercises
+    const sessionsWithLogs = await Promise.all(
+        sessions.map(async (session: { localId: string }) => {
+            const logs = await database.select().from(schema.exerciseLogs).where(eq(schema.exerciseLogs.sessionId, session.localId));
+
+            const logsWithExercise = await Promise.all(
+                logs.map(async (log: { exerciseId: string }) => {
+                    const [exercise] = await database.select().from(schema.exercises).where(eq(schema.exercises.localId, log.exerciseId)).limit(1);
+                    return {
+                        ...log,
+                        exercise: exercise || ({} as any),
+                    };
+                }),
+            );
+
+            return { ...session, logs: logsWithExercise };
+        }),
+    );
+
+    return { ...user, plans: plansWithDays, sessions: sessionsWithLogs };
 }

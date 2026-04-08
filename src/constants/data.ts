@@ -10,9 +10,9 @@ export const STEP_CONTENT = {
 
 export const TOTAL_STEPS = 6;
 
-export const weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
+export const weekdays = ["Sunday","Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
 
-export const DAY_ORDER: Record<Weekday, number> = { Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4, Saturday: 5, Sunday: 6 };
+export const DAY_ORDER: Record<Weekday, number> = { Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6 };
 
 export const DISTANCE_UNITS: Extract<Unit, "km" | "mi">[] = ["km", "mi"];
 export const WEIGHT_UNITS: Extract<Unit, "kg" | "lb">[] = ["kg", "lb"];

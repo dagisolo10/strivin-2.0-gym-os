@@ -1,4 +1,8 @@
-import { useStaticStore, WorkoutDay } from "@/store/use-static-store";
+import { getDb } from "@/db/client";
+import * as schema from "@/db/sqlite";
+import { randomUUID } from "expo-crypto";
+import { and, eq, inArray } from "drizzle-orm";
+import { enqueueWrite } from "@/db/write-queue";
 
 export interface ExerciseInput {
     name: string;
@@ -26,68 +30,102 @@ interface SavePlanInput {
 
 export async function saveWorkoutPlan(data: SavePlanInput) {
     const userId = data.userId;
-    const store = useStaticStore.getState();
+    const database = getDb();
 
     try {
-        let planId = data.planId;
+        return await enqueueWrite(() =>
+            database.transaction(async (tx) => {
+                let planId = data.planId;
 
-        if (planId) {
-            const existingPlan = store.plans.find((plan) => plan.localId === planId && plan.userId === userId);
-            if (!existingPlan) throw new Error("Plan not found");
+                // rewrite
+                if (planId) {
+                    const [existingPlan] = await tx
+                        .select()
+                        .from(schema.workoutPlans)
+                        .where(and(eq(schema.workoutPlans.localId, planId), eq(schema.workoutPlans.userId, userId)))
+                        .limit(1);
 
-            store.updatePlan(planId, {
-                split: data.split,
-                workoutDaysPerWeek: data.workoutDays.length,
-                goal: data.goal ?? null,
-                fitnessLevel: data.fitnessLevel ?? null,
-            });
+                    if (!existingPlan) throw new Error("Plan not found");
 
-            // Delete existing days for this plan
-            const existingDays = store.workoutDays.filter((day) => day.planId === planId);
-            existingDays.forEach((day) => store.deleteWorkoutDay(day.localId));
-        } else {
-            const newPlan = store.createPlan({
-                split: data.split,
-                workoutDaysPerWeek: data.workoutDays.length,
-                goal: data.goal ?? null,
-                fitnessLevel: data.fitnessLevel ?? null,
-            });
-            planId = newPlan.localId;
-        }
+                    await tx
+                        .update(schema.workoutPlans)
+                        .set({
+                            split: data.split,
+                            workoutDaysPerWeek: data.workoutDays.length,
+                            goal: data.goal ?? null,
+                            fitnessLevel: data.fitnessLevel ?? null,
+                        })
+                        .where(eq(schema.workoutPlans.localId, planId));
 
-        const dayRecords: WorkoutDay[] = data.workoutDays.map((day) => store.createWorkoutDay({ userId, planId: planId!, dayName: day }));
+                    const existingDays = await tx.select().from(schema.workoutDays).where(eq(schema.workoutDays.planId, planId));
+                    const dayIds = existingDays.map((day) => day.localId);
 
-        if (data.exercises && data.exercises.length > 0) {
-            const exerciseData = data.exercises
-                .flatMap((exercise) =>
-                    (exercise.workoutDays || []).map((selectedDayName: Weekday) => {
-                        const dayRecord = dayRecords.find((day) => day.dayName === selectedDayName);
-                        if (!dayRecord) return null;
+                    if (dayIds.length > 0) {
+                        await tx.delete(schema.exercises).where(inArray(schema.exercises.workoutDayId, dayIds));
+                    }
 
-                        return {
+                    await tx.delete(schema.workoutDays).where(eq(schema.workoutDays.planId, planId));
+                }
+                // creation
+                else {
+                    const newPlanId = randomUUID();
+                    await tx.insert(schema.workoutPlans).values({
+                        localId: newPlanId,
+                        userId,
+                        split: data.split,
+                        workoutDaysPerWeek: data.workoutDays.length,
+                        goal: data.goal ?? null,
+                        fitnessLevel: data.fitnessLevel ?? null,
+                    });
+                    planId = newPlanId;
+                }
+
+                const dayRecords = await Promise.all(
+                    data.workoutDays.map(async (day) => {
+                        const dayId = randomUUID();
+                        await tx.insert(schema.workoutDays).values({
+                            localId: dayId,
                             userId,
                             planId: planId!,
-                            workoutDayId: dayRecord.localId,
-                            name: exercise.name,
-                            sets: exercise.sets ?? null,
-                            reps: exercise.reps ?? null,
-                            weight: exercise.weight ?? null,
-                            distance: exercise.distance ?? null,
-                            duration: exercise.duration ?? null,
-                            unit: exercise.unit,
-                            type: exercise.type,
-                            variant: exercise.variant,
-                        };
+                            dayName: day,
+                        });
+                        return { localId: dayId, dayName: day };
                     }),
-                )
-                .filter((exercise): exercise is NonNullable<typeof exercise> => exercise !== null);
+                );
 
-            if (exerciseData.length) {
-                exerciseData.forEach((ex) => store.createExercise(ex));
-            }
-        }
+                if (data.exercises && data.exercises.length > 0) {
+                    const exerciseData = data.exercises
+                        .flatMap((exercise) =>
+                            (exercise.workoutDays || []).map((selectedDayName: Weekday) => {
+                                const dayRecord = dayRecords.find((day) => day.dayName === selectedDayName);
+                                if (!dayRecord) return null;
 
-        return { success: true as const, planId: planId! };
+                                return {
+                                    userId,
+                                    planId: planId!,
+                                    workoutDayId: dayRecord.localId,
+                                    name: exercise.name,
+                                    sets: exercise.sets ?? null,
+                                    reps: exercise.reps ?? null,
+                                    weight: exercise.weight ?? null,
+                                    distance: exercise.distance ?? null,
+                                    duration: exercise.duration ?? null,
+                                    unit: exercise.unit,
+                                    type: exercise.type,
+                                    variant: exercise.variant,
+                                };
+                            }),
+                        )
+                        .filter((exercise): exercise is NonNullable<typeof exercise> => exercise !== null);
+
+                    if (exerciseData.length) {
+                        await tx.insert(schema.exercises).values(exerciseData);
+                    }
+                }
+
+                return { success: true as const, planId: planId! };
+            }),
+        );
     } catch (error) {
         console.error("saveWorkoutPlan error", error);
         return { success: false as const, error: error instanceof Error ? error.message : "Unknown error" };
@@ -95,15 +133,31 @@ export async function saveWorkoutPlan(data: SavePlanInput) {
 }
 
 export async function deleteWorkoutPlan(userId: string, planId: string) {
+    const database = getDb();
     try {
-        const store = useStaticStore.getState();
+        return await enqueueWrite(() =>
+            database.transaction(async (tx) => {
+                const [plan] = await tx
+                    .select()
+                    .from(schema.workoutPlans)
+                    .where(and(eq(schema.workoutPlans.localId, planId), eq(schema.workoutPlans.userId, userId)))
+                    .limit(1);
 
-        const plan = store.plans.find((plan) => plan.localId === planId);
-        if (!plan || plan.userId !== userId) throw new Error("Plan not found");
+                if (!plan) throw new Error("Plan not found");
 
-        const deleted = store.deletePlan(planId);
-        if (!deleted) throw new Error("Plan not found");
-        return { success: true as const };
+                const workoutDays = await tx.select().from(schema.workoutDays).where(eq(schema.workoutDays.planId, planId));
+                const dayIds = workoutDays.map((day) => day.localId);
+
+                if (dayIds.length > 0) {
+                    await tx.delete(schema.exercises).where(inArray(schema.exercises.workoutDayId, dayIds));
+                }
+
+                await tx.delete(schema.workoutDays).where(eq(schema.workoutDays.planId, planId));
+                await tx.delete(schema.workoutPlans).where(eq(schema.workoutPlans.localId, planId));
+
+                return { success: true as const };
+            }),
+        );
     } catch (error) {
         console.error("deleteWorkoutPlan error", error);
         return { success: false as const, error: error instanceof Error ? error.message : "Unknown error" };
