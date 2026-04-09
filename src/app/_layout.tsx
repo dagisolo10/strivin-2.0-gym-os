@@ -1,14 +1,17 @@
 import "./global.css";
 import "react-native-reanimated";
 
-// import * as Sentry from "@sentry.react-native";
 import { useFonts } from "expo-font";
+import { posthog } from "@/lib/posthog";
 import { Toaster } from "react-native-sonner";
 import migrations from "@/drizzle/migrations";
 import { getDb, getExpoDb } from "@/db/client";
+import * as Sentry from "@sentry/react-native";
 import { SplashScreen, Stack } from "expo-router";
 import React, { Suspense, useEffect } from "react";
+import { PostHogProvider } from "posthog-react-native";
 import { DrizzleProvider } from "@/context/db-provider";
+import { ClerkProvider, ClerkLoaded } from "@clerk/expo";
 import { useDrizzleStudio } from "expo-drizzle-studio-plugin";
 import { useMigrations } from "drizzle-orm/expo-sqlite/migrator";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -16,9 +19,10 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ErrorScreen, LoadingScreen } from "@/components/ui/screen-ui";
 
 SplashScreen.preventAutoHideAsync();
+Sentry.init({ dsn: process.env.EXPO_PUBLIC_SENTRY_DSN, debug: __DEV__ });
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
 
-export default function RootLayout() {
+function RootLayout() {
     const expoDB = getExpoDb();
     const drizzleDB = getDb();
 
@@ -48,9 +52,15 @@ export default function RootLayout() {
     };
 
     return (
-        <GestureHandlerRootView style={{ flex: 1 }}>
-            <SafeAreaProvider>{renderContent()}</SafeAreaProvider>
-        </GestureHandlerRootView>
+        <ClerkProvider publishableKey={publishableKey}>
+            <ClerkLoaded>
+                <PostHogProvider client={posthog}>
+                    <GestureHandlerRootView style={{ flex: 1 }}>
+                        <SafeAreaProvider>{renderContent()}</SafeAreaProvider>
+                    </GestureHandlerRootView>
+                </PostHogProvider>
+            </ClerkLoaded>
+        </ClerkProvider>
     );
 }
 
@@ -63,5 +73,4 @@ const fonts = {
     "sans-light": require("../../assets/fonts/PlusJakartaSans-Light.ttf"),
 };
 
-// Sentry.init({ dsn: process.env.EXPO_PUBLIC_SENTRY_DSN, debug: __DEV__ });
-// export default Sentry.wrap(RootLayout);
+export default Sentry.wrap(RootLayout);

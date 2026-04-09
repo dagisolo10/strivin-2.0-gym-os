@@ -1,9 +1,10 @@
 import { Button } from "../ui/interactive";
 import { Badge, Card, Div, P, Row } from "../ui/display";
-import { DayAssignmentField, DurationField, ExerciseNameField, SetsAndRepsFields, TypeField, UnitAndValueField, VariantField } from "../exercise/exercise-form-fields";
+import { CoreWeightToggleField, DayAssignmentField, DurationField, ExerciseNameField, SetsAndRepsFields, TypeField, UnitAndValueField, VariantField, } from "../exercise/exercise-form-fields";
 
-import { Exercise } from "@/types/model";
+import { useEffect, useRef } from "react";
 import { getTemplate } from "@/constants/templates";
+import { Exercise, ExerciseWithUsesWeight } from "@/types/types";
 import { useOnboardingStore } from "@/store/use-onboarding-store";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 
@@ -12,13 +13,15 @@ export default function Exercises() {
     const { control } = useFormContext();
     const { fields: exercises, append: appendEx, remove: removeEx } = useFieldArray({ control, name: "exercises" });
 
-    const getCustomDefault = (currentSplit: WorkoutSplit): Partial<Exercise> => {
+    const getCustomDefault = (currentSplit: WorkoutSplit): Partial<ExerciseWithUsesWeight> => {
         const isEndurance = currentSplit === "Endurance";
+        const type = isEndurance ? "Cardio" : "Push";
         return {
             name: "",
-            type: isEndurance ? "Cardio" : "Push",
+            type: type,
             variant: isEndurance ? "Endurance" : "Upper",
             unit: isEndurance ? "km" : "kg",
+            usesWeight: type === "Cardio" || type === "Push" ? false : true,
             sets: isEndurance ? undefined : 3,
             reps: isEndurance ? undefined : 12,
             weight: isEndurance ? undefined : 10,
@@ -51,7 +54,52 @@ export default function Exercises() {
 
 function ExerciseCard({ index, control, split, workoutDays, removeEx }: any) {
     const currentType = useWatch({ control, name: `exercises.${index}.type` });
+    const usesWeight = useWatch({ control, name: `exercises.${index}.usesWeight` }) ?? (currentType === "Cardio" || currentType === "Core" ? false : true);
     const isCardio = currentType === "Cardio";
+    const isCore = currentType === "Core";
+    const previousTypeRef = useRef<string>("");
+    const { setValue, resetField, getValues } = useFormContext();
+
+    const isBodyweight = !usesWeight;
+
+    useEffect(() => {
+        if (currentType === "Core" && previousTypeRef.current !== "Core") {
+            setValue(`exercises.${index}.usesWeight`, false);
+        }
+        previousTypeRef.current = currentType ?? "";
+    }, [currentType, index, setValue]);
+
+    useEffect(() => {
+        if (!currentType) return;
+
+        if (isCardio) {
+            resetField(`exercises.${index}.sets`);
+            resetField(`exercises.${index}.reps`);
+            resetField(`exercises.${index}.weight`);
+            setValue(`exercises.${index}.usesWeight`, false);
+            if (!["km", "mi"].includes(String(getValues(`exercises.${index}.unit`) ?? ""))) {
+                setValue(`exercises.${index}.unit`, "km");
+            }
+            return;
+        }
+
+        resetField(`exercises.${index}.duration`);
+        resetField(`exercises.${index}.distance`);
+
+        if (currentType !== "Core") {
+            setValue(`exercises.${index}.usesWeight`, true);
+        }
+
+        if (currentType === "Core" && !usesWeight) {
+            resetField(`exercises.${index}.weight`);
+            resetField(`exercises.${index}.unit`);
+            return;
+        }
+
+        if (!["kg", "lb"].includes(String(getValues(`exercises.${index}.unit`) ?? ""))) {
+            setValue(`exercises.${index}.unit`, "kg");
+        }
+    }, [currentType, getValues, index, isCardio, resetField, setValue, usesWeight]);
 
     return (
         <Card className="gap-5">
@@ -66,8 +114,9 @@ function ExerciseCard({ index, control, split, workoutDays, removeEx }: any) {
             <DayAssignmentField control={control} index={index} availableDays={workoutDays} />
             <TypeField control={control} index={index} />
             <VariantField control={control} index={index} />
-            <UnitAndValueField control={control} index={index} isCardio={isCardio} />
             {isCardio ? <DurationField control={control} index={index} /> : <SetsAndRepsFields control={control} index={index} />}
+            {isCore ? <CoreWeightToggleField control={control} index={index} /> : null}
+            <UnitAndValueField control={control} index={index} isCardio={isCardio} showWeight={!isBodyweight} />
         </Card>
     );
 }

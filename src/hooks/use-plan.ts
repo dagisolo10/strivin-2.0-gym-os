@@ -8,5 +8,7 @@ export function usePlan() {
 
     const activePlan = enrichedPlans.find((plan) => plan.localId === selectedPlanId) ?? enrichedPlans[0] ?? null;
 
-    return { enrichedPlans, activePlan };
+    return {
+        activePlan,
+    };
 }

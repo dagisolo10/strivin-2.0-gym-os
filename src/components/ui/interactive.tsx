@@ -12,7 +12,7 @@ interface ButtonProps extends PressableProps, VariantProps<typeof buttonVariants
     textClassName?: string;
 }
 
-const buttonVariants = cva("flex-row items-center justify-center rounded-2xl px-6 data-disabled:opacity-50", {
+const buttonVariants = cva("flex-row items-center justify-center rounded-2xl px-6 disabled:pointer-events-none disabled:opacity-50", {
     variants: {
         variant: {
             primary: "bg-primary",
@@ -48,7 +48,16 @@ const textVariants = {
     link: "text-primary underline",
 };
 
-export const Button = ({ variant = "primary", size = "default", children, className, textClassName, onPress, component = false, ...props }: ButtonProps & { component?: boolean }) => {
+export const Button = ({
+    variant = "primary",
+    size = "default",
+    children,
+    className,
+    textClassName,
+    onPress,
+    component = false,
+    ...props
+}: ButtonProps & { component?: boolean }) => {
     const handlePress = (e: GestureResponderEvent) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         onPress?.(e);
@@ -73,12 +82,23 @@ const navLinkTextVariants = {
     link: "text-accent underline",
 };
 
-export const NavLink = ({ href, variant = "link", size = "default", children, className, textClassName, onPress, component = false, ...props }: ButtonProps & { href: LinkProps["href"]; component?: boolean }) => {
+export const NavLink = ({
+    href,
+    variant = "link",
+    size = "default",
+    children,
+    className,
+    textClassName,
+    onPress,
+    component = false,
+    ...props
+}: ButtonProps & { href: LinkProps["href"]; component?: boolean }) => {
     const handlePress = (e: GestureResponderEvent) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         onPress?.(e);
     };
-    const renderContent = () => (!component ? <P className={cn("font-sans-medium", variant && navLinkTextVariants[variant], textClassName)}>{children}</P> : children);
+    const renderContent = () =>
+        !component ? <P className={cn("font-sans-medium", variant && navLinkTextVariants[variant], textClassName)}>{children}</P> : children;
 
     return (
         <Link href={href} asChild>
@@ -90,5 +110,9 @@ export const NavLink = ({ href, variant = "link", size = "default", children, cl
 };
 
 export const Input = ({ className, ...props }: TextInputProps & { className?: string }) => (
-    <TextInput placeholderTextColor="#999999" className={cn("border-border bg-background text-foreground h-14 w-full rounded-2xl border pl-4 text-base", className)} {...props} />
+    <TextInput
+        placeholderTextColor="#999999"
+        className={cn("border-border bg-background text-foreground h-14 w-full rounded-2xl border pl-4 text-base", className)}
+        {...props}
+    />
 );

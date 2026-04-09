@@ -1,6 +1,6 @@
 import { ErrorMessage } from "../ui/screen-ui";
-import { Div, Field, Row } from "../ui/display";
 import { Button, Input } from "../ui/interactive";
+import { Div, Field, P, Row } from "../ui/display";
 
 import React from "react";
 import { cn } from "@/lib/utils";
@@ -26,7 +26,12 @@ export const ExerciseNameField = ({ control, index, namePrefix, placeholder }: B
             name={getFieldName("name", index, namePrefix)}
             render={({ field: { onChange, value }, fieldState: { error } }) => (
                 <Div>
-                    <Input className={cn(error && "border-destructive")} placeholder={placeholder || "e.g. Incline Bench Press"} value={value} onChangeText={onChange} />
+                    <Input
+                        className={cn(error && "border-destructive")}
+                        placeholder={placeholder || "e.g. Incline Bench Press"}
+                        value={value}
+                        onChangeText={onChange}
+                    />
                     <ErrorMessage message={error?.message} />
                 </Div>
             )}
@@ -83,7 +88,12 @@ export const VariantField = ({ control, index, namePrefix }: BaseFieldProps) => 
     </Field>
 );
 
-export const DayAssignmentField = ({ control, index, namePrefix, availableDays = weekdays as unknown as Weekday[] }: BaseFieldProps & { availableDays?: Weekday[] }) => (
+export const DayAssignmentField = ({
+    control,
+    index,
+    namePrefix,
+    availableDays = weekdays as unknown as Weekday[],
+}: BaseFieldProps & { availableDays?: Weekday[] }) => (
     <Field label="Perform On">
         <Controller
             name={getFieldName("workoutDays", index, namePrefix)}
@@ -159,36 +169,91 @@ export const DurationField = ({ control, index, namePrefix }: BaseFieldProps) =>
     </Field>
 );
 
-export const UnitAndValueField = ({ control, index, namePrefix, isCardio }: BaseFieldProps & { isCardio: boolean }) => (
-    <Field label={isCardio ? "Distance" : "Weight"}>
-        <Row className="items-start gap-4">
-            <Controller
-                name={getFieldName(isCardio ? "distance" : "weight", index, namePrefix)}
-                control={control}
-                render={({ field: { value, onChange }, fieldState: { error } }) => (
-                    <Div className="flex-1 gap-2">
-                        <Input keyboardType="decimal-pad" value={value?.toString()} onChangeText={(val) => handleNumberChange(val, onChange)} placeholder={isCardio ? "5" : "10"} />
-                        <ErrorMessage message={error?.message} />
-                    </Div>
-                )}
-            />
+export const CoreWeightToggleField = ({ control, index, namePrefix }: BaseFieldProps) => (
+    <Field label="Weighted Core">
+        <Controller
+            name={getFieldName("usesWeight", index, namePrefix)}
+            control={control}
+            render={({ field: { value, onChange } }) => {
+                const isChecked = Boolean(value);
 
-            <Controller
-                name={getFieldName("unit", index, namePrefix)}
-                control={control}
-                render={({ field: { value, onChange }, fieldState: { error } }) => (
-                    <Row>
-                        {(isCardio ? DISTANCE_UNITS : WEIGHT_UNITS).map((unit) => (
-                            <Button key={unit} className="px-5" onPress={() => onChange(unit)} variant={value === unit ? "secondary" : "outline"} textClassName={value === unit ? "text-background" : "text-muted-foreground"}>
-                                {unit}
-                            </Button>
-                        ))}
-                    </Row>
-                )}
-            />
-        </Row>
+                return (
+                    <Button variant={isChecked ? "secondary" : "outline"} className="h-auto p-0" onPress={() => onChange(!isChecked)} component>
+                        <Row className="flex-1 gap-3 p-4">
+                            <Div
+                                className={cn(
+                                    "border-border bg-background size-6 items-center justify-center rounded-md border",
+                                    isChecked && "border-accent bg-accent",
+                                )}>
+                                {isChecked ? <Div className="bg-background size-2 rounded-full" /> : null}
+                            </Div>
+                            <Div className="flex-1 gap-1">
+                                <P className={cn("font-semibold", isChecked ? "text-background" : "text-foreground")}>Track weight for this core movement</P>
+                                <P className={cn("text-sm", isChecked ? "text-background/80" : "text-muted-foreground")}>
+                                    Leave this off for bodyweight planks, crunches, and similar exercises.
+                                </P>
+                            </Div>
+                        </Row>
+                    </Button>
+                );
+            }}
+        />
     </Field>
 );
+
+export const UnitAndValueField = ({
+    control,
+    index,
+    namePrefix,
+    isCardio,
+    showWeight = true,
+}: BaseFieldProps & { isCardio: boolean; showWeight?: boolean }) => {
+    if (!isCardio && !showWeight) return null;
+
+    return (
+        <Field label={isCardio ? "Distance" : "Weight"}>
+            <Row className="items-start gap-4">
+                <Controller
+                    name={getFieldName(isCardio ? "distance" : "weight", index, namePrefix)}
+                    control={control}
+                    render={({ field: { value, onChange }, fieldState: { error } }) => (
+                        <Div className="flex-1 gap-2">
+                            <Input
+                                keyboardType="decimal-pad"
+                                value={value?.toString()}
+                                onChangeText={(val) => handleNumberChange(val, onChange)}
+                                placeholder={isCardio ? "5" : "10"}
+                            />
+                            <ErrorMessage message={error?.message} />
+                        </Div>
+                    )}
+                />
+
+                <Controller
+                    name={getFieldName("unit", index, namePrefix)}
+                    control={control}
+                    render={({ field: { value, onChange }, fieldState: { error } }) => (
+                        <Div className="gap-2">
+                            <Row>
+                                {(isCardio ? DISTANCE_UNITS : WEIGHT_UNITS).map((unit) => (
+                                    <Button
+                                        key={unit}
+                                        className="px-5"
+                                        onPress={() => onChange(unit)}
+                                        variant={value === unit ? "secondary" : "outline"}
+                                        textClassName={value === unit ? "text-background" : "text-muted-foreground"}>
+                                        {unit}
+                                    </Button>
+                                ))}
+                            </Row>
+                            <ErrorMessage message={error?.message} />
+                        </Div>
+                    )}
+                />
+            </Row>
+        </Field>
+    );
+};
 
 const handleNumberChange = (value: string, onChange: (val: number | string | undefined) => void) => {
     if (value === "" || value === ".") return onChange(undefined);

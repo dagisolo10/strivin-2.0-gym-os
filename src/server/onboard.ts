@@ -5,7 +5,8 @@ import { exercises, users, workoutDays, workoutPlans } from "@/db/sqlite";
 interface ExerciseInput {
     name: string;
     workoutDays: Weekday[];
-    unit: Unit;
+    unit?: Unit | null;
+    usesWeight?: boolean;
     sets?: number;
     reps?: number;
     weight?: number;
@@ -51,7 +52,10 @@ export async function registerUser(data: OnboardingState) {
                 .returning({ localId: workoutPlans.localId });
 
             const newDayRecords = data.workoutDays.map((day) => ({ dayName: day, userId: user.localId, planId: plan.localId }));
-            const insertedWorkoutDays = await tx.insert(workoutDays).values(newDayRecords).returning({ localId: workoutDays.localId, dayName: workoutDays.dayName });
+            const insertedWorkoutDays = await tx
+                .insert(workoutDays)
+                .values(newDayRecords)
+                .returning({ localId: workoutDays.localId, dayName: workoutDays.dayName });
 
             if (data.exercises && data.exercises.length > 0 && newDayRecords.length > 0) {
                 const exerciseData = data.exercises
@@ -70,7 +74,7 @@ export async function registerUser(data: OnboardingState) {
                                 weight: exercise.weight ?? null,
                                 distance: exercise.distance ?? null,
                                 duration: exercise.duration ?? null,
-                                unit: exercise.unit,
+                                unit: exercise.unit ?? null,
                                 type: exercise.type,
                                 variant: exercise.variant,
                             };
@@ -82,13 +86,6 @@ export async function registerUser(data: OnboardingState) {
                     await tx.insert(exercises).values(exerciseData);
                 }
             }
-
-            // await tx.insert(workoutSessions).values({
-            //     userId: user.localId,
-            //     date: getDateKey(),
-            //     sessionLength: data.sessionLength ?? null,
-            //     perfectDay: false,
-            // });
 
             return { success: true, userId: user.localId };
         }),

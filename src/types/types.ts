@@ -11,6 +11,17 @@ export interface ExerciseWithLogs extends Exercise {
     logs: ExerciseLog[];
 }
 
+export interface ExerciseWithUsesWeight extends Exercise {
+    usesWeight?: boolean;
+}
+
+export interface GroupedExercise {
+    localId: string;
+    exerciseIds: string[];
+    workoutDays: Weekday[];
+    exercise: ExerciseWithUsesWeight;
+}
+
 export interface WorkoutDayWithExercises extends WorkoutDay {
     exercises: ExerciseWithLogs[];
 }

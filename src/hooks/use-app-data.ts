@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
 import * as schema from "@/db/sqlite";
 import { eq, inArray } from "drizzle-orm";
 import { useDrizzle } from "@/context/db-provider";
-import { SessionWithRelations } from "@/types/model";
 import { useLiveQuery } from "drizzle-orm/expo-sqlite";
-import { ExerciseWithLogs, WorkoutPlanWithDays } from "@/types/types";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { WorkoutSessionWithLogs, ExerciseWithLogs, WorkoutPlanWithDays } from "@/types/types";
 
 const EMPTY_ID = "__no_match__";
 
@@ -31,7 +30,8 @@ export function useAppData(options: UseAppDataOptions = {}) {
     const [loadedPlansUserId, setLoadedPlansUserId] = useState<string | null>(null);
     const previousPlansUpdatedAtRef = useRef<number | null>(null);
 
-    const planIds = useMemo(() => plans.map((plan) => plan.localId), [plans]);
+    const activePlans = useMemo(() => plans.filter((plan) => !plan.isDeleted), [plans]);
+    const planIds = useMemo(() => activePlans.map((plan) => plan.localId), [activePlans]);
     const shouldLoadPlanDetails = includePlanDetails && planIds.length > 0;
     const safePlanIds = shouldLoadPlanDetails ? planIds : [EMPTY_ID];
 
@@ -48,6 +48,9 @@ export function useAppData(options: UseAppDataOptions = {}) {
         }),
         [includePlanDetails, safePlanIds.join("|")],
     );
+
+    const activeWorkoutDays = useMemo(() => workoutDays.filter((day) => !day.isDeleted), [workoutDays]);
+    const activeExercises = useMemo(() => exercises.filter((exercise) => !exercise.isDeleted), [exercises]);
 
     const shouldLoadWorkoutHistory = includeWorkoutHistory && user !== null;
 
@@ -87,51 +90,45 @@ export function useAppData(options: UseAppDataOptions = {}) {
 
     const exercisesByDayId = useMemo(() => {
         const map = new Map<string, ExerciseWithLogs[]>();
-        for (const exercise of exercises) {
-            const exerciseWithLogs: ExerciseWithLogs = {
-                ...exercise,
-                logs: logsByExerciseId.get(exercise.localId) ?? [],
-            };
+        for (const exercise of activeExercises) {
+            const exerciseWithLogs: ExerciseWithLogs = { ...exercise, logs: logsByExerciseId.get(exercise.localId) ?? [] };
 
             const currentExercises = map.get(exercise.workoutDayId);
             if (currentExercises) currentExercises.push(exerciseWithLogs);
             else map.set(exercise.workoutDayId, [exerciseWithLogs]);
         }
         return map;
-    }, [exercises, logsByExerciseId]);
+    }, [activeExercises, logsByExerciseId]);
 
     const enrichedPlans = useMemo<WorkoutPlanWithDays[]>(() => {
-        return plans.map((plan) => ({
+        return activePlans.map((plan) => ({
             ...plan,
-            days: workoutDays
-                .filter((day) => day.planId === plan.localId)
-                .map((day) => ({
-                    ...day,
-                    exercises: exercisesByDayId.get(day.localId) ?? [],
-                })),
+            days: activeWorkoutDays.filter((day) => day.planId === plan.localId).map((day) => ({ ...day, exercises: exercisesByDayId.get(day.localId) ?? [] })),
         }));
-    }, [exercisesByDayId, plans, workoutDays]);
+    }, [activePlans, activeWorkoutDays, exercisesByDayId]);
 
     const exercisesById = useMemo(() => {
         const map = new Map<string, (typeof exercises)[number]>();
-        for (const exercise of exercises) {
-            map.set(exercise.localId, exercise);
-        }
+        for (const exercise of exercises) map.set(exercise.localId, exercise);
         return map;
     }, [exercises]);
 
-    const sessionsWithLogs = useMemo<SessionWithRelations[]>(() => {
+    const sessionsWithLogs = useMemo<WorkoutSessionWithLogs[]>(() => {
         return sessions.map((session) => ({
             ...session,
-            logs: (logsBySessionId.get(session.localId) ?? []).map((log) => ({
-                ...log,
-                exercise: exercisesById.get(log.exerciseId)!,
-            })),
+            logs: (logsBySessionId.get(session.localId) ?? []).map((log) => ({ ...log, exercise: exercisesById.get(log.exerciseId)! })),
         }));
     }, [exercisesById, logsBySessionId, sessions]);
 
     const toTimestamp = (value?: number | Date) => (value instanceof Date ? value.getTime() : (value ?? 0));
-    const updatedAt = Math.max(toTimestamp(userUpdatedAt), toTimestamp(plansUpdatedAt), toTimestamp(workoutDaysUpdatedAt), toTimestamp(exercisesUpdatedAt), toTimestamp(sessionsUpdatedAt), toTimestamp(logsUpdatedAt));
+    const updatedAt = Math.max(
+        toTimestamp(userUpdatedAt),
+        toTimestamp(plansUpdatedAt),
+        toTimestamp(workoutDaysUpdatedAt),
+        toTimestamp(exercisesUpdatedAt),
+        toTimestamp(sessionsUpdatedAt),
+        toTimestamp(logsUpdatedAt),
+    );
 
     useEffect(() => {
         if (userId === EMPTY_ID) {
@@ -152,7 +149,7 @@ export function useAppData(options: UseAppDataOptions = {}) {
     }, [plansUpdatedAt, userId]);
 
     const plansLoadedForCurrentUser = userId === EMPTY_ID || loadedPlansUserId === userId;
-    
+
     const isLoading = includeWorkoutHistory
         ? !sessionsUpdatedAt || !logsUpdatedAt || (!userUpdatedAt && user === null)
         : includePlanDetails
@@ -161,9 +158,9 @@ export function useAppData(options: UseAppDataOptions = {}) {
 
     return {
         user,
-        plans,
-        workoutDays,
-        exercises,
+        plans: activePlans,
+        workoutDays: activeWorkoutDays,
+        exercises: activeExercises,
         sessions,
         logs,
         enrichedPlans,

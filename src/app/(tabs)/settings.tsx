@@ -61,6 +61,9 @@ export default function Settings() {
                 <H3>{activePlan?.split ?? "No plan yet"}</H3>
                 <P className="text-muted-foreground text-sm">{(plans ?? []).length} saved plans on this device.</P>
 
+                <NavLink href={{ pathname: "/plan-editor", params: { mode: "new" } }} className="mt-2" variant={"secondary"} size={"lg"}>
+                    Create new plan
+                </NavLink>
                 <NavLink href={"/plan-editor"} className="mt-2" variant={"outline"} size={"lg"}>
                     Edit selected plan
                 </NavLink>
@@ -97,7 +100,6 @@ export default function Settings() {
                 <Button
                     variant={"destructive"}
                     onPress={async () => {
-                        // resetStore();
                         router.replace("/(tabs)/home");
                     }}>
                     Reload demo data

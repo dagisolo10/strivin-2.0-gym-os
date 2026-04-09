@@ -1,25 +1,25 @@
 import { z } from "zod";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
 import { exerciseSchema } from "@/db/zod";
 import { toast } from "react-native-sonner";
 import { DAY_ORDER } from "@/constants/data";
-import { useAppData } from "@/hooks/use-app-data";
 import { addExercise } from "@/server/exercise";
+import { useAppData } from "@/hooks/use-app-data";
 import { Button } from "@/components/ui/interactive";
 import { HeroPill } from "@/components/add/hero-pill";
 import { usePlanStore } from "@/store/use-plan-store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { StatusChip } from "@/components/add/status-chip";
+import React, { useEffect, useRef, useState } from "react";
 import { SectionTitle } from "@/components/add/section-title";
 import { PlanCarousel } from "@/components/plans/plan-carousel";
 import { ErrorToast } from "@/components/add/add-screen-components";
 import { useForm, FieldErrors, FieldValues } from "react-hook-form";
 import { ErrorScreen, LoadingScreen } from "@/components/ui/screen-ui";
 import { Badge, Card, Div, H1, H2, P, Row, Screen } from "@/components/ui/display";
-import { ExerciseNameField, TypeField, VariantField, DayAssignmentField, SetsAndRepsFields, DurationField, UnitAndValueField } from "@/components/exercise/exercise-form-fields";
+import { ExerciseNameField, TypeField, VariantField, DayAssignmentField, SetsAndRepsFields, DurationField, UnitAndValueField, CoreWeightToggleField } from "@/components/exercise/exercise-form-fields";
 
-type AddExerciseValues = z.infer<typeof exerciseSchema>;
+type AddExerciseValues = z.input<typeof exerciseSchema>;
 
 export default function AddExerciseScreen() {
     const router = useRouter();
@@ -34,9 +34,9 @@ export default function AddExerciseScreen() {
         if (enrichedPlans) syncSelectedPlan(enrichedPlans.map((plan) => plan.localId));
     }, [enrichedPlans, syncSelectedPlan]);
 
-    const { control, handleSubmit, watch, resetField, setValue, getValues } = useForm<AddExerciseValues>({
+    const { control, handleSubmit, watch, resetField, setValue, getValues, reset } = useForm<AddExerciseValues>({
         resolver: zodResolver(exerciseSchema),
-        defaultValues: { name: "", unit: "", type: "", variant: "", workoutDays: [] },
+        defaultValues: { name: "", unit: "", type: "", variant: "", workoutDays: [], usesWeight: true },
     });
 
     const selectedType = watch("type");
@@ -44,8 +44,20 @@ export default function AddExerciseScreen() {
     const selectedDays = watch("workoutDays") ?? [];
     const selectedVariant = watch("variant");
     const exerciseName = watch("name");
-    const isCardio = selectedType === "Cardio";
+    const usesWeight = watch("usesWeight") ?? (selectedType === "Cardio" || selectedType === "Core" ? false : true);
     const hasSelectedType = Boolean(selectedType);
+    const previousTypeRef = useRef<string>("");
+
+    const isCardio = selectedType === "Cardio";
+    const isCore = selectedType === "Core";
+    const isBodyweight = !usesWeight;
+
+    useEffect(() => {
+        if (selectedType === "Core" && previousTypeRef.current !== "Core") {
+            setValue("usesWeight", false);
+        }
+        previousTypeRef.current = selectedType ?? "";
+    }, [selectedType, setValue]);
 
     useEffect(() => {
         if (!selectedType) return;
@@ -54,13 +66,23 @@ export default function AddExerciseScreen() {
             resetField("sets");
             resetField("reps");
             resetField("weight");
+            setValue("usesWeight", false);
             if (!["km", "mi"].includes(String(getValues("unit") ?? ""))) setValue("unit", "km");
         } else {
             resetField("duration");
             resetField("distance");
-            if (!["kg", "lb"].includes(String(getValues("unit") ?? ""))) setValue("unit", "kg");
+            if (selectedType !== "Core") {
+                setValue("usesWeight", true);
+            }
+            if ((selectedType !== "Core" || usesWeight) && !["kg", "lb"].includes(String(getValues("unit") ?? ""))) {
+                setValue("unit", "kg");
+            }
+            if (selectedType === "Core" && !usesWeight) {
+                resetField("weight");
+                resetField("unit");
+            }
         }
-    }, [getValues, isCardio, resetField, selectedType, setValue]);
+    }, [getValues, isCardio, resetField, selectedType, setValue, usesWeight]);
 
     if (isLoading) return <LoadingScreen />;
     if (!user) return <ErrorScreen message="User not found." />;
@@ -98,6 +120,7 @@ export default function AddExerciseScreen() {
             });
 
             await request;
+            reset({ name: "", unit: "", type: "", variant: "", workoutDays: [], usesWeight: true });
             router.replace("/(tabs)/home");
         } catch (error) {
             console.error(error);
@@ -162,7 +185,8 @@ export default function AddExerciseScreen() {
                     + {!hasSelectedType ? "Choose type" : isCardio ? "Endurance" : "Strength"}+{" "}
                 </Badge>
                 {hasSelectedType ? isCardio ? <DurationField control={control} /> : <SetsAndRepsFields control={control} /> : null}
-                {hasSelectedType ? <UnitAndValueField control={control} isCardio={isCardio} /> : null}
+                {isCore ? <CoreWeightToggleField control={control} /> : null}
+                {hasSelectedType ? <UnitAndValueField control={control} isCardio={isCardio} showWeight={!isBodyweight} /> : null}
             </Card>
 
             <Card variant="muted" className="gap-4">
@@ -175,7 +199,7 @@ export default function AddExerciseScreen() {
                                 {selectedType || "Type pending"} {selectedVariant ? ` •  ${selectedVariant}` : ""}
                             </P>
                         </Div>
-                        <Badge variant={isCardio ? "secondary" : "outline"}>{selectedUnit || (isCardio ? "km" : "kg")}</Badge>
+                        <Badge variant={isCardio ? "secondary" : "outline"}>{!isBodyweight ? selectedUnit || (isCardio ? "km" : "kg") : "Bodyweight"}</Badge>
                     </Row>
 
                     <Div className="row flex-wrap gap-4">
@@ -192,7 +216,13 @@ export default function AddExerciseScreen() {
                         )}
                     </Div>
 
-                    <P className="text-muted-foreground text-sm">{isCardio ? "This will track distance and duration in the day logger." : "This will show target sets, reps, and weight guidance in the day logger."}</P>
+                    <P className="text-muted-foreground text-sm">
+                        {isCardio
+                            ? "This will track distance and duration in the day logger."
+                            : isCore && !usesWeight
+                              ? "This will show sets and reps without requiring a weight target in the day logger."
+                              : "This will show target sets, reps, and weight guidance in the day logger."}
+                    </P>
                 </Div>
             </Card>
 

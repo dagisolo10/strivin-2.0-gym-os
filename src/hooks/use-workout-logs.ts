@@ -9,5 +9,7 @@ export function useWorkoutLogs() {
 
     const todaysLogs = workoutLogs.filter((log) => log.sessionId === todaysSession?.localId);
 
-    return { workoutLogs, todaysLogs };
+    return {
+        todaysLogs,
+    };
 }

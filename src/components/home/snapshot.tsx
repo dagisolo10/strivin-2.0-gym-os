@@ -9,20 +9,24 @@ interface SnapshotProp {
 
 export default function Snapshot({ plan, totalExercises }: SnapshotProp) {
     return (
-        <Card className="gap-4">
+        <Card className="gap-3">
             <Row>
                 <Div>
                     <P className="text-muted-foreground text-xs tracking-wider uppercase">Active Plan</P>
                     <H3>{plan.split}</H3>
                 </Div>
-
-                <NavLink href="/plan-editor" variant={"outline"}>
-                    Edit Plan
-                </NavLink>
             </Row>
-            <Row className="gap-3">
+            <Row className="gap-4">
                 <InfoPill label="Days / Week" value={String(plan.workoutDaysPerWeek)} />
                 <InfoPill label="Experience" value={plan.fitnessLevel ?? "Beginner"} />
+            </Row>
+            <Row className="gap-4">
+                <NavLink className="flex-1" href={{ pathname: "/plan-editor", params: { mode: "new" } }} variant={"outline"}>
+                    New Plan
+                </NavLink>
+                <NavLink className="flex-1" href="/plan-editor" variant={"outline"}>
+                    Edit Plan
+                </NavLink>
             </Row>
             <P className="text-muted-foreground text-sm">
                 {totalExercises} exercises planned across {plan.workoutDaysPerWeek} active days.
