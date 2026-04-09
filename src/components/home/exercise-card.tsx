@@ -52,6 +52,9 @@ function ExerciseCard({ userId, exercise, logs, onPress, expandedId, selectedDay
     const averageReps = logs.length ? logs.reduce((sum, log) => sum + (log.reps ?? 0), 0) / logs.length : exercise.reps;
     const averageWeight = logs.length ? logs.reduce((sum, log) => sum + (log.weight ?? 0), 0) / logs.length : exercise.weight;
 
+    const averageDistance = logs.length ? logs.reduce((sum, log) => sum + (log.distance ?? 0), 0) / logs.length : exercise.distance;
+    const averageDuration = logs.length ? logs.reduce((sum, log) => sum + (log.duration ?? 0), 0) / logs.length : exercise.duration;
+
     const suggestedLoad = calculateSuggestedLoad(exercise.weight, averageWeight ?? undefined, averageReps ?? undefined, exercise.reps ?? undefined);
     const progressPercent = Math.min(Math.round((completedSets / targetSets) * 100), 100);
 
@@ -114,11 +117,11 @@ function ExerciseCard({ userId, exercise, logs, onPress, expandedId, selectedDay
             : `${targetSets} sets${exercise.reps ? `  •  ${exercise.reps} reps` : ""}${exercise.weight ? `  •  ${exercise.weight}${exercise.unit ?? "kg"}` : ""}`,
 
         bestAverage: isCardio
-            ? `${Math.round(((averageWeight ?? exercise.distance ?? 0) as number) * 10) / 10}${exercise.unit ?? "km"}`
+            ? `${Math.round(((averageDistance ?? 0) as number) * 10) / 10}${exercise.unit ?? "km"}`
             : `${Math.round(((averageWeight ?? exercise.weight ?? 0) as number) * 10) / 10}${exercise.unit ?? "kg"}`,
 
         pacing: isCardio
-            ? `${Math.round((averageReps ?? exercise.duration ?? 0) as number)} min`
+            ? `${Math.round((averageDuration ?? 0) as number)} min`
             : `${Math.round((averageReps ?? exercise.reps ?? 0) as number)} reps`,
     };
 

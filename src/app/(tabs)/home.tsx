@@ -7,7 +7,7 @@ import { computePerfectDay } from "@/server/workout";
 import { useEffect, useMemo, useState } from "react";
 import { usePlanStore } from "@/store/use-plan-store";
 import StatusCard from "@/components/home/status-card";
-import { FlatList } from "react-native-gesture-handler";
+import { FlatList } from "react-native";
 import { getWeekdayName } from "@/lib/helper-functions";
 import DayCarousel from "@/components/home/day-carousel";
 import ExerciseCard from "@/components/home/exercise-card";

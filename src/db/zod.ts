@@ -18,14 +18,16 @@ export const exerciseSchema = z
     })
     .superRefine((data, ctx) => {
         if (data.type === "Cardio") {
-            if (!data.duration || data.duration < 1) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Duration is required for Cardio", path: ["duration"] });
-            if (data.distance === undefined || data.distance === null || data.distance < 0) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Distance is required for Cardio", path: ["distance"] });
+            if (!data.duration || data.duration < 1)
+                ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Duration is required for Cardio", path: ["duration"] });
+            if (data.distance === undefined || data.distance === null || data.distance < 1)
+                ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Distance is required for Cardio", path: ["distance"] });
             if (!data.unit) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Must choose unit", path: ["unit"] });
         } else {
             if (!data.sets || data.sets < 1) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Sets are required for strength training", path: ["sets"] });
             if (!data.reps || data.reps < 1) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Reps are required", path: ["reps"] });
 
-            const isBodyweight = !data.usesWeight || (data.type === "Core" && !data.usesWeight);
+            const isBodyweight = !data.usesWeight;
             if (isBodyweight) return;
 
             if (!data.unit) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Must choose unit", path: ["unit"] });
@@ -45,7 +47,6 @@ export const onboardingSchema = z.object({
     fitnessLevel: z.enum(["Beginner", "Intermediate", "Advanced"]).optional(),
     profile: z.string().optional(),
 });
-
 
 export const planEditorSchema = z.object({
     split: z.string().trim().min(1, "Split name is required"),

@@ -3,7 +3,7 @@ import { useAppData } from "@/hooks/use-app-data";
 import { useEffect, useMemo, useState } from "react";
 import type { GroupedExercise } from "@/types/types";
 import { usePlanStore } from "@/store/use-plan-store";
-import { FlatList } from "react-native-gesture-handler";
+import { FlatList } from "react-native";
 import { PlanCarousel } from "@/components/plans/plan-carousel";
 import { ErrorScreen, LoadingScreen } from "@/components/ui/screen-ui";
 import ExerciseDetailsCard from "@/components/exercise/exercise-details-card";
@@ -27,7 +27,7 @@ export default function AllExercisesScreen() {
 
     const { isLoading, updatedAt, user, enrichedPlans } = useAppData({
         includePlanDetails: true,
-        includeWorkoutHistory: true,
+        includeWorkoutHistory: false,
     });
 
     const setSelectedPlanId = usePlanStore((state) => state.setSelectedPlanId);
@@ -125,13 +125,15 @@ export default function AllExercisesScreen() {
                         </Row>
                     </Div>
                 }
-                ListEmptyComponent={EmptyState}
+                ListEmptyComponent={<EmptyState />}
                 renderItem={({ item }) => (
                     <ExerciseDetailsCard
                         groupedExercise={item}
                         availableDays={availableDays}
                         userId={user.localId}
                         planId={activePlan.localId}
+                        isExpanded={expandedExerciseId === item.localId}
+                        onToggle={(expanded) => setExpandedExerciseId(expanded ? item.localId : null)}
                         onExerciseUpdated={() => setExpandedExerciseId(null)}
                         onExerciseDeleted={() => setExpandedExerciseId(null)}
                     />

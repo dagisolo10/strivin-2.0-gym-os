@@ -57,7 +57,13 @@ export async function addExercise(data: Data) {
                 const [plan] = await tx
                     .select()
                     .from(schema.workoutPlans)
-                    .where(and(eq(schema.workoutPlans.localId, data.planId), eq(schema.workoutPlans.userId, data.userId)))
+                    .where(
+                        and(
+                            eq(schema.workoutPlans.localId, data.planId),
+                            eq(schema.workoutPlans.userId, data.userId),
+                            eq(schema.workoutPlans.isDeleted, false),
+                        ),
+                    )
                     .limit(1);
 
                 if (!plan) throw new Error("Plan not found");

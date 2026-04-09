@@ -116,7 +116,13 @@ export function useAppData(options: UseAppDataOptions = {}) {
     const sessionsWithLogs = useMemo<WorkoutSessionWithLogs[]>(() => {
         return sessions.map((session) => ({
             ...session,
-            logs: (logsBySessionId.get(session.localId) ?? []).map((log) => ({ ...log, exercise: exercisesById.get(log.exerciseId)! })),
+            logs: (logsBySessionId.get(session.localId) ?? [])
+                .map((log) => {
+                    const exercise = exercisesById.get(log.exerciseId);
+                    if (!exercise) return null;
+                    return { ...log, exercise };
+                })
+                .filter((log): log is Extract<typeof log, { exercise: any }> => log !== null),
         }));
     }, [exercisesById, logsBySessionId, sessions]);
 

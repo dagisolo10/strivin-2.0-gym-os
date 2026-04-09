@@ -1,10 +1,9 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { styled } from "nativewind";
-import { ScrollView } from "react-native-gesture-handler";
 import { cva, VariantProps } from "class-variance-authority";
 import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
-import { KeyboardAvoidingView, Platform, Text, TextProps, View, ViewProps } from "react-native";
+import { KeyboardAvoidingView, Platform, Text, TextProps, View, ViewProps, ScrollView } from "react-native";
 
 const SafeAreaView = styled(RNSafeAreaView);
 

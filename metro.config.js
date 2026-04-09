@@ -4,7 +4,7 @@ const {
 } = require("@sentry/react-native/metro");
 
 const config = getSentryExpoConfig(__dirname);
-
+config.resolver.assetExts.push("wasm");
 config.resolver.sourceExts.push("sql");
 
 config.transformer.babelTransformerPath = require.resolve("./sql-transformer.js");

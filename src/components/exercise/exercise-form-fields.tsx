@@ -169,7 +169,7 @@ export const DurationField = ({ control, index, namePrefix }: BaseFieldProps) =>
     </Field>
 );
 
-export const CoreWeightToggleField = ({ control, index, namePrefix }: BaseFieldProps) => (
+export const CoreWeightToggleField = ({ control, index, namePrefix, onToggle }: BaseFieldProps & { onToggle?: (val: boolean) => void }) => (
     <Field label="Weighted Core">
         <Controller
             name={getFieldName("usesWeight", index, namePrefix)}
@@ -178,7 +178,15 @@ export const CoreWeightToggleField = ({ control, index, namePrefix }: BaseFieldP
                 const isChecked = Boolean(value);
 
                 return (
-                    <Button variant={isChecked ? "secondary" : "outline"} className="h-auto p-0" onPress={() => onChange(!isChecked)} component>
+                    <Button
+                        variant={isChecked ? "secondary" : "outline"}
+                        className="h-auto p-0"
+                        onPress={() => {
+                            const next = !isChecked;
+                            onChange(next);
+                            onToggle?.(next);
+                        }}
+                        component>
                         <Row className="flex-1 gap-3 p-4">
                             <Div
                                 className={cn(

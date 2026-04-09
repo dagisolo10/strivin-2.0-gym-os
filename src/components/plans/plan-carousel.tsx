@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import { DAY_ORDER } from "@/constants/data";
 import { WorkoutPlanWithDays } from "@/types/types";
 import { Button } from "@/components/ui/interactive";
-import { FlatList } from "react-native-gesture-handler";
+import { FlatList } from "react-native";
 import { Badge, Card, Div, H3, P, Row } from "@/components/ui/display";
 
 interface PlanCarouselProps {

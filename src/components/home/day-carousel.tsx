@@ -3,7 +3,7 @@ import { weekdays } from "@/constants/data";
 import { Div, P } from "@/components/ui/display";
 import { WorkoutPlanWithDays } from "@/types/types";
 import { Button } from "@/components/ui/interactive";
-import { FlatList } from "react-native-gesture-handler";
+import { FlatList } from "react-native";
 import { getWeekdayName } from "@/lib/helper-functions";
 
 interface CarouselProp {
@@ -13,6 +13,7 @@ interface CarouselProp {
 }
 
 export default function DayCarousel({ selectedDayName, plan, onSelect }: CarouselProp) {
+    const today = getWeekdayName();
     return (
         <Div className="gap-2">
             <P className="text-muted-foreground px-1 text-xs tracking-widest uppercase">Weekly Overview</P>
@@ -27,8 +28,8 @@ export default function DayCarousel({ selectedDayName, plan, onSelect }: Carouse
                         component
                         className={cn(
                             "h-auto w-32 flex-col gap-1 px-4 py-3",
-                            day === getWeekdayName() && "border-primary border",
-                            selectedDayName === getWeekdayName() && selectedDayName === day ? "bg-primary" : selectedDayName === day ? "bg-accent" : "bg-muted",
+                            day === today && "border-primary border",
+                            selectedDayName === today && selectedDayName === day ? "bg-primary" : selectedDayName === day ? "bg-accent" : "bg-muted",
                         )}
                         onPress={() => onSelect(day)}
                         key={day}>

@@ -17,7 +17,16 @@ import { ErrorToast } from "@/components/add/add-screen-components";
 import { useForm, FieldErrors, FieldValues } from "react-hook-form";
 import { ErrorScreen, LoadingScreen } from "@/components/ui/screen-ui";
 import { Badge, Card, Div, H1, H2, P, Row, Screen } from "@/components/ui/display";
-import { ExerciseNameField, TypeField, VariantField, DayAssignmentField, SetsAndRepsFields, DurationField, UnitAndValueField, CoreWeightToggleField } from "@/components/exercise/exercise-form-fields";
+import {
+    ExerciseNameField,
+    TypeField,
+    VariantField,
+    DayAssignmentField,
+    SetsAndRepsFields,
+    DurationField,
+    UnitAndValueField,
+    CoreWeightToggleField,
+} from "@/components/exercise/exercise-form-fields";
 
 type AddExerciseValues = z.input<typeof exerciseSchema>;
 
@@ -50,7 +59,7 @@ export default function AddExerciseScreen() {
 
     const isCardio = selectedType === "Cardio";
     const isCore = selectedType === "Core";
-    const isBodyweight = !usesWeight;
+    const isBodyweight = !isCardio && !usesWeight;
 
     useEffect(() => {
         if (selectedType === "Core" && previousTypeRef.current !== "Core") {
@@ -157,12 +166,22 @@ export default function AddExerciseScreen() {
                 </Row>
             </Card>
 
-            <PlanCarousel plans={enrichedPlans as any} selectedPlanId={activePlan.localId} onSelect={setSelectedPlanId} title="Destination Plan" subtitle="Pick the plan that should receive this movement before you save it." />
+            <PlanCarousel
+                plans={enrichedPlans as any}
+                selectedPlanId={activePlan.localId}
+                onSelect={setSelectedPlanId}
+                title="Destination Plan"
+                subtitle="Pick the plan that should receive this movement before you save it."
+            />
 
             <Card className="gap-5">
                 <Row className="items-start gap-3">
                     <Div className="flex-1">
-                        <SectionTitle eyebrow="Identity" title="Describe the movement" note="Start with the name, category, and placement so the routine stays easy to scan later." />
+                        <SectionTitle
+                            eyebrow="Identity"
+                            title="Describe the movement"
+                            note="Start with the name, category, and placement so the routine stays easy to scan later."
+                        />
                     </Div>
                     <StatusChip label="Type" value={selectedType || "Choose"} muted={!selectedType} />
                 </Row>
@@ -178,7 +197,13 @@ export default function AddExerciseScreen() {
                     <SectionTitle
                         eyebrow="Metrics"
                         title="Define the training target"
-                        note={!hasSelectedType ? "Choose a type first to unlock the right workload fields." : isCardio ? "Use time and distance for conditioning work." : "Use sets, reps, and weight for strength work."}
+                        note={
+                            !hasSelectedType
+                                ? "Choose a type first to unlock the right workload fields."
+                                : isCardio
+                                  ? "Use time and distance for conditioning work."
+                                  : "Use sets, reps, and weight for strength work."
+                        }
                     />
                 </Row>
                 <Badge className="self-start" variant={!hasSelectedType ? "outline" : isCardio ? "secondary" : "primary"}>
@@ -199,7 +224,7 @@ export default function AddExerciseScreen() {
                                 {selectedType || "Type pending"} {selectedVariant ? ` •  ${selectedVariant}` : ""}
                             </P>
                         </Div>
-                        <Badge variant={isCardio ? "secondary" : "outline"}>{!isBodyweight ? selectedUnit || (isCardio ? "km" : "kg") : "Bodyweight"}</Badge>
+                        <Badge variant={isCardio ? "secondary" : "outline"}>{isBodyweight ? "Bodyweight" : selectedUnit || (isCardio ? "km" : "kg")}</Badge>
                     </Row>
 
                     <Div className="row flex-wrap gap-4">
@@ -228,7 +253,9 @@ export default function AddExerciseScreen() {
 
             <Card className="items-start gap-3 border-0 bg-[#FFF1D6]">
                 <Badge variant="outline">Coach note</Badge>
-                <P className="text-muted-foreground">Use specific names like &quot;Incline Dumbbell Press&quot; or &quot;Treadmill Tempo Run&quot; so logging later feels immediate and precise.</P>
+                <P className="text-muted-foreground">
+                    Use specific names like &quot;Incline Dumbbell Press&quot; or &quot;Treadmill Tempo Run&quot; so logging later feels immediate and precise.
+                </P>
             </Card>
 
             <Button onPress={handleSubmit(registerEx, onInvalid)} disabled={isSubmitting}>

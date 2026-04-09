@@ -65,8 +65,8 @@ function buildDesiredExercises(data: SavePlanInput): DesiredExerciseRecord[] {
         .filter((exercise) => exercise.name.length > 0);
 }
 
-function getExerciseMatchKey(name: string, workoutDayId: string) {
-    return `${workoutDayId}::${name.trim().toLowerCase()}`;
+function getExerciseMatchKey(name: string, workoutDayId: string, type: ExerciseType, variant: ExerciseVariant) {
+    return `${workoutDayId}::${name.trim().toLowerCase()}::${type}::${variant}`;
 }
 
 export async function saveWorkoutPlan(data: SavePlanInput) {
@@ -232,7 +232,7 @@ export async function saveWorkoutPlan(data: SavePlanInput) {
 
                 const existingExercisesByKey = new Map<string, typeof existingExercises>();
                 for (const exercise of existingExercises) {
-                    const key = getExerciseMatchKey(exercise.name, exercise.workoutDayId);
+                    const key = getExerciseMatchKey(exercise.name, exercise.workoutDayId, exercise.type, exercise.variant);
                     const bucket = existingExercisesByKey.get(key);
                     if (bucket) bucket.push(exercise);
                     else existingExercisesByKey.set(key, [exercise]);
@@ -249,7 +249,7 @@ export async function saveWorkoutPlan(data: SavePlanInput) {
                     const workoutDayId = workoutDayIdByName.get(desiredExercise.dayName);
                     if (!workoutDayId) continue;
 
-                    const key = getExerciseMatchKey(desiredExercise.name, workoutDayId);
+                    const key = getExerciseMatchKey(desiredExercise.name, workoutDayId, desiredExercise.type, desiredExercise.variant);
                     const existingMatches = existingExercisesByKey.get(key) ?? [];
                     const existingExercise = existingMatches.shift();
 

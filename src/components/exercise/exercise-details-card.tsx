@@ -14,6 +14,8 @@ interface ExerciseDetailsCardProps {
     availableDays: Weekday[];
     userId: string;
     planId: string;
+    isExpanded?: boolean;
+    onToggle?: (expanded: boolean) => void;
     onExerciseUpdated?: () => void;
     onExerciseDeleted?: () => void;
 }
@@ -23,12 +25,25 @@ export default function ExerciseDetailsCard({
     availableDays,
     userId,
     planId,
+    isExpanded: isExpandedProp,
+    onToggle,
     onExerciseUpdated,
     onExerciseDeleted,
 }: ExerciseDetailsCardProps) {
-    const [isExpanded, setIsExpanded] = useState(false);
+    const [isExpandedInternal, setIsExpandedInternal] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+
+    const isExpanded = isExpandedProp ?? isExpandedInternal;
+
+    const handleToggle = () => {
+        const nextValue = !isExpanded;
+        if (onToggle) {
+            onToggle(nextValue);
+        } else {
+            setIsExpandedInternal(nextValue);
+        }
+    };
 
     const { exercise, exerciseIds, workoutDays } = groupedExercise;
     const isCardio = exercise.type === "Cardio";
@@ -89,7 +104,7 @@ export default function ExerciseDetailsCard({
 
     return (
         <Card className="p-0">
-            <Button variant="ghost" onPress={() => setIsExpanded((value) => !value)} className="h-auto p-4" component>
+            <Button variant="ghost" onPress={handleToggle} className="h-auto p-4" component>
                 <Row className="flex-1 gap-4">
                     <Div className="bg-muted size-12 items-center justify-center rounded-2xl">
                         <P className="text-primary text-sm font-bold">{exercise.type.slice(0, 4)}</P>

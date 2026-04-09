@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import * as Haptics from "expo-haptics";
 import { Link, LinkProps } from "expo-router";
 import { VariantProps, cva } from "class-variance-authority";
-import { PressableProps, GestureResponderEvent, Pressable, TextInput, TextInputProps } from "react-native";
+import { PressableProps, GestureResponderEvent, Pressable, TextInput, TextInputProps, Switch, SwitchProps } from "react-native";
 
 interface ButtonProps extends PressableProps, VariantProps<typeof buttonVariants> {
     children: React.ReactNode;
@@ -113,6 +113,20 @@ export const Input = ({ className, ...props }: TextInputProps & { className?: st
     <TextInput
         placeholderTextColor="#999999"
         className={cn("border-border bg-background text-foreground h-14 w-full rounded-2xl border pl-4 text-base", className)}
+        {...props}
+    />
+);
+
+export const Toggle = ({ value, onToggle, ...props }: Omit<SwitchProps, "value" | "onValueChange"> & { value?: boolean; onToggle?: (val: boolean) => void }) => (
+    <Switch
+        value={value}
+        onValueChange={(val) => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            onToggle?.(val);
+        }}
+        trackColor={{ false: "#E2E8F0", true: "#ea7a53" }}
+        thumbColor={"#FFFFFF"}
+        ios_backgroundColor="#E2E8F0"
         {...props}
     />
 );
