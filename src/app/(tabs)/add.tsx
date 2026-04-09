@@ -33,14 +33,14 @@ type AddExerciseValues = z.input<typeof exerciseSchema>;
 export default function AddExerciseScreen() {
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const { user, enrichedPlans, isLoading } = useAppData({ includePlanDetails: true, includeWorkoutHistory: true });
+    const { user, enrichedPlans, isLoading } = useAppData({ includePlanDetails: true, includeWorkoutHistory: false });
     const setSelectedPlanId = usePlanStore((state) => state.setSelectedPlanId);
     const syncSelectedPlan = usePlanStore((state) => state.syncSelectedPlan);
     const selectedPlanId = usePlanStore((state) => state.selectedPlanId);
     const activePlan = enrichedPlans.find((plan) => plan.localId === selectedPlanId) ?? enrichedPlans[0] ?? null;
 
     useEffect(() => {
-        if (enrichedPlans) syncSelectedPlan(enrichedPlans.map((plan) => plan.localId));
+        if (enrichedPlans.length) syncSelectedPlan(enrichedPlans.map((plan) => plan.localId));
     }, [enrichedPlans, syncSelectedPlan]);
 
     const { control, handleSubmit, watch, resetField, setValue, getValues, reset } = useForm<AddExerciseValues>({

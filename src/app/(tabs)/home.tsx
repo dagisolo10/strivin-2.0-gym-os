@@ -37,7 +37,7 @@ export default function HomeScreen() {
     }, [activePlan, tables.todaysSession]);
 
     useEffect(() => {
-        if (enrichedPlans) syncSelectedPlan(enrichedPlans.map((plan) => plan.localId));
+        if (enrichedPlans.length) syncSelectedPlan(enrichedPlans.map((plan) => plan.localId));
     }, [enrichedPlans, syncSelectedPlan]);
 
     if (isLoading) return <LoadingScreen />;
@@ -82,7 +82,7 @@ export default function HomeScreen() {
                 }
                 ListFooterComponent={() => <Separator vertical />}
                 data={tables.todaysExercises}
-                extraData={`${updatedAt}-${values.completedSets}-${tables.todaysExercises?.length ?? 0}`}
+                extraData={`${updatedAt}-${expandedExerciseId}-${values.completedSets}-${tables.todaysExercises?.length ?? 0}`}
                 keyExtractor={(ex) => String(ex.localId)}
                 showsVerticalScrollIndicator={false}
                 contentContainerClassName="pb-24"
