@@ -9,12 +9,18 @@ interface PlanState {
 
 export const usePlanStore = create<PlanState>((set) => ({
     selectedPlanId: null,
+
     setSelectedPlanId: (planId) => set({ selectedPlanId: planId }),
+
     syncSelectedPlan: (planIds) =>
         set((state) => {
             if (!planIds.length) return { selectedPlanId: null };
-            if (state.selectedPlanId !== null && planIds.includes(state.selectedPlanId)) return state;
+
+            const stillValid = state.selectedPlanId && planIds.includes(state.selectedPlanId);
+            if (stillValid) return state;
+
             return { selectedPlanId: planIds[0] };
         }),
+
     clearSelectedPlan: () => set({ selectedPlanId: null }),
 }));

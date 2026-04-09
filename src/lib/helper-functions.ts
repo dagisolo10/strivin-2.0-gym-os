@@ -1,11 +1,5 @@
 import { DAY_ORDER } from "@/constants/data";
 
-export const toOptionalNumber = (t: string) => {
-    if (t.trim() === "") return undefined;
-    const n = Number(t);
-    return Number.isFinite(n) ? n : undefined;
-};
-
 export function getDateKey(date = new Date()) {
     return date.toISOString().slice(0, 10);
 }

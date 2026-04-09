@@ -15,6 +15,7 @@ export const users = sqliteTable("users", {
 
     currentStreak: integer("current_streak").default(0),
     longestStreak: integer("longest_streak").default(0),
+    lastStreakAwardedAt: text("last_streak_awarded_at"),
 
     createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`),
     syncStatus: text("sync_status").default("pending").$type<SyncStatus>().notNull(),

@@ -1,10 +1,13 @@
 import { relations } from "drizzle-orm";
-import { boolean, pgTable, real, serial, text, integer, timestamp } from "drizzle-orm/pg-core";
+import { boolean, pgTable, real, text, integer, timestamp } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
     id: text("id").primaryKey(),
     name: text("name").notNull(),
     profile: text("profile"),
+    currentStreak: integer("current_streak").default(0),
+    longestStreak: integer("longest_streak").default(0),
+    lastStreakAwardedAt: text("last_streak_awarded_at"),
     createdAt: timestamp("created_at").defaultNow(),
 });
 

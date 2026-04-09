@@ -15,14 +15,14 @@ import Exercises from "@/components/onboarding/exercises";
 import Frequency from "@/components/onboarding/frequency";
 import { STEP_CONTENT, TOTAL_STEPS } from "@/constants/data";
 import Intro from "@/components/onboarding/floating-barbell";
-import { KeyboardAvoidingView, Platform } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useOnboardingStore } from "@/store/use-onboarding-store";
 import { Badge, Card, Div, H1, P, Row } from "@/components/ui/display";
-import { ScrollView, GestureHandlerRootView } from "react-native-gesture-handler";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, { FadeInRight, FadeInUp, FadeOutLeft, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 
-type OnboardingFormValues = z.infer<typeof onboardingSchema>;
+type OnboardingFormValues = z.input<typeof onboardingSchema>;
 
 export default function Onboarding() {
     const router = useRouter();
@@ -47,7 +47,20 @@ export default function Onboarding() {
             name: storedName,
             split: storedSplit,
             workoutDays: storedWorkoutDays,
-            exercises: storedExercises,
+            exercises: storedExercises.map((exercise) => {
+                const isCardio = exercise.type === "Cardio";
+                const isCore = exercise.type === "Core";
+                return {
+                    ...exercise,
+                    unit: exercise.unit ?? undefined,
+                    usesWeight: (exercise as any).usesWeight ?? (isCardio || isCore ? false : true),
+                    sets: exercise.sets ?? undefined,
+                    reps: exercise.reps ?? undefined,
+                    weight: exercise.weight ?? undefined,
+                    distance: exercise.distance ?? undefined,
+                    duration: exercise.duration ?? undefined,
+                };
+            }),
             goal: storedGoal,
             sessionLength: storedSessionLength,
             fitnessLevel: storedFitnessLevel,
@@ -85,7 +98,7 @@ export default function Onboarding() {
                     exercises: currentValues.exercises?.map((exercise) => ({
                         ...exercise,
                         workoutDays: exercise.workoutDays as Weekday[],
-                        unit: exercise.unit as Unit,
+                        unit: (exercise.unit as Unit | undefined) ?? undefined,
                         type: exercise.type as ExerciseType,
                         variant: exercise.variant as ExerciseVariant,
                     })),
@@ -123,7 +136,11 @@ export default function Onboarding() {
                         </Row>
 
                         <Div className="bg-muted h-2 w-full overflow-hidden rounded-full">
-                            <Animated.View layout={FadeInUp} className={cn(step === TOTAL_STEPS ? "bg-success" : "bg-primary", "h-full rounded-full")} style={{ width: `${(step / TOTAL_STEPS) * 100}%` }} />
+                            <Animated.View
+                                layout={FadeInUp}
+                                className={cn(step === TOTAL_STEPS ? "bg-success" : "bg-primary", "h-full rounded-full")}
+                                style={{ width: `${(step / TOTAL_STEPS) * 100}%` }}
+                            />
                         </Div>
                     </Div>
 
@@ -158,7 +175,11 @@ export default function Onboarding() {
                                 Back
                             </Button>
                         ) : null}
-                        <Button variant={step === TOTAL_STEPS ? "success" : "primary"} onPress={nextStep} className={cn(step === 0 ? "w-full" : "flex-1")} disabled={isSubmitting}>
+                        <Button
+                            variant={step === TOTAL_STEPS ? "success" : "primary"}
+                            onPress={nextStep}
+                            className={cn(step === 0 ? "w-full" : "flex-1")}
+                            disabled={isSubmitting}>
                             {step === 0 ? "Get Started" : step === TOTAL_STEPS ? (isSubmitting ? "Saving..." : "Go to Dashboard") : "Continue"}
                         </Button>
                     </Div>

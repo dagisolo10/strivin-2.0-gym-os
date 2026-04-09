@@ -1,38 +1,43 @@
 import { z } from "zod";
 import { cn } from "@/lib/utils";
 import { Alert } from "react-native";
-import { useRouter } from "expo-router";
+import { usePlan } from "@/hooks/use-plan";
+import { planEditorSchema } from "@/db/zod";
 import { toast } from "react-native-sonner";
-import { useEffect, useState } from "react";
 import { useAppData } from "@/hooks/use-app-data";
+import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { usePlanStore } from "@/store/use-plan-store";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { PlanCarousel } from "@/components/plans/plan-carousel";
 import { Button, Input, NavLink } from "@/components/ui/interactive";
 import { deleteWorkoutPlan, saveWorkoutPlan, ExerciseInput } from "@/server/plan";
 import { Badge, Card, Div, H1, H2, Label, P, Row, Screen } from "@/components/ui/display";
 import { FITNESS_LEVELS, GOALS, SESSION_LENGTHS, weekdays, WORKOUT_SPLIT } from "@/constants/data";
 
-const planEditorSchema = z.object({
-    split: z.string().trim().min(1, "Split name is required"),
-    workoutDays: z.array(z.string()).min(1, "Choose at least one workout day"),
-    goal: z.string().optional(),
-    sessionLength: z.number().min(15).max(180).optional(),
-    fitnessLevel: z.enum(["Beginner", "Intermediate", "Advanced"]).optional(),
-});
-
 type PlanEditorValues = z.infer<typeof planEditorSchema>;
 
 export default function PlanEditorScreen() {
     const router = useRouter();
+    const params = useLocalSearchParams<{ mode?: string }>();
+
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-    const { user, enrichedPlans: plans, exercises, workoutDays } = useAppData({ includePlanDetails: true, includeWorkoutHistory: true });
+
+    const { user, enrichedPlans: plans, exercises } = useAppData({ includePlanDetails: true, includeWorkoutHistory: true });
+    const { activePlan } = usePlan();
+
     const setSelectedPlanId = usePlanStore((state) => state.setSelectedPlanId);
     const syncSelectedPlan = usePlanStore((state) => state.syncSelectedPlan);
-    const selectedPlanId = usePlanStore((state) => state.selectedPlanId);
-    const activePlan = plans.find((plan) => plan.localId === selectedPlanId) ?? plans[0] ?? null;
+
+    const isCreateMode = params.mode === "new";
+    const selectedPlan = isCreateMode ? null : activePlan;
+
+    const defaultWorkoutDays = useMemo(
+        () => (selectedPlan?.days.map((day) => day.dayName) ?? ["Monday", "Wednesday", "Friday"]) as Weekday[],
+        [selectedPlan?.days],
+    );
 
     useEffect(() => {
         syncSelectedPlan(plans.map((plan) => plan.localId));
@@ -41,24 +46,24 @@ export default function PlanEditorScreen() {
     const methods = useForm<PlanEditorValues>({
         resolver: zodResolver(planEditorSchema),
         defaultValues: {
-            split: activePlan?.split ?? "Push Pull Leg",
-            workoutDays: workoutDays.map((day) => day.dayName) ?? ["Monday", "Wednesday", "Friday"],
-            goal: activePlan?.goal ?? "Hypertrophy",
+            split: selectedPlan?.split ?? "",
+            workoutDays: defaultWorkoutDays,
+            goal: selectedPlan?.goal ?? "Hypertrophy",
             sessionLength: 60,
-            fitnessLevel: activePlan?.fitnessLevel ?? "Beginner",
+            fitnessLevel: selectedPlan?.fitnessLevel ?? "Beginner",
         },
     });
     const resetForm = methods.reset;
 
     useEffect(() => {
         resetForm({
-            split: activePlan?.split ?? "Push Pull Leg",
-            workoutDays: workoutDays.map((day) => day.dayName) ?? ["Monday", "Wednesday", "Friday"],
-            goal: activePlan?.goal ?? "Hypertrophy",
+            split: selectedPlan?.split ?? "",
+            workoutDays: defaultWorkoutDays,
+            goal: selectedPlan?.goal ?? "Hypertrophy",
             sessionLength: 60,
-            fitnessLevel: activePlan?.fitnessLevel ?? "Beginner",
+            fitnessLevel: selectedPlan?.fitnessLevel ?? "Beginner",
         });
-    }, [activePlan?.fitnessLevel, activePlan?.goal, activePlan?.split, resetForm, workoutDays]);
+    }, [selectedPlan?.fitnessLevel, selectedPlan?.goal, selectedPlan?.split, defaultWorkoutDays, resetForm]);
 
     if (!user) {
         return (
@@ -69,22 +74,24 @@ export default function PlanEditorScreen() {
         );
     }
 
-    const exercisesForPlan: ExerciseInput[] = workoutDays.flatMap((day) => {
-        return exercises
-            .filter((exercise) => exercise.unit !== null)
-            .map((exercise) => ({
-                name: exercise.name,
-                workoutDays: [day.dayName],
-                unit: exercise.unit as Unit,
-                sets: exercise.sets ?? undefined,
-                reps: exercise.reps ?? undefined,
-                weight: exercise.weight ?? undefined,
-                distance: exercise.distance ?? undefined,
-                duration: exercise.duration ?? undefined,
-                type: exercise.type,
-                variant: exercise.variant,
-            }));
-    });
+    const exercisesForPlan: ExerciseInput[] = isCreateMode
+        ? []
+        : (selectedPlan?.days ?? []).flatMap((day) => {
+              return exercises
+                  .filter((exercise) => exercise.planId === selectedPlan?.localId && exercise.workoutDayId === day.localId)
+                  .map((exercise) => ({
+                      name: exercise.name,
+                      workoutDays: [day.dayName],
+                      unit: exercise.unit ?? undefined,
+                      sets: exercise.sets ?? undefined,
+                      reps: exercise.reps ?? undefined,
+                      weight: exercise.weight ?? undefined,
+                      distance: exercise.distance ?? undefined,
+                      duration: exercise.duration ?? undefined,
+                      type: exercise.type,
+                      variant: exercise.variant,
+                  }));
+          });
 
     const savePlan = async (values: PlanEditorValues, createNew = false) => {
         if (isSubmitting) return;
@@ -92,7 +99,7 @@ export default function PlanEditorScreen() {
         try {
             const request = saveWorkoutPlan({
                 userId: user.localId,
-                planId: createNew ? undefined : activePlan?.localId,
+                planId: createNew || isCreateMode ? undefined : selectedPlan?.localId,
                 split: values.split as WorkoutSplit,
                 workoutDays: values.workoutDays as Weekday[],
                 goal: values.goal as Goal | undefined,
@@ -104,10 +111,11 @@ export default function PlanEditorScreen() {
                 return result;
             });
 
+            const isCreating = createNew || isCreateMode;
             toast.promise(request, {
-                loading: createNew ? "Creating plan..." : "Saving plan...",
-                success: createNew ? "New plan created" : "Plan updated",
-                error: createNew ? "Could not create plan" : "Could not update plan",
+                loading: isCreating ? "Creating plan..." : "Saving plan...",
+                success: isCreating ? "New plan created" : "Plan updated",
+                error: isCreating ? "Could not create plan" : "Could not update plan",
             });
 
             const result = await request;
@@ -122,31 +130,35 @@ export default function PlanEditorScreen() {
 
     return (
         <Screen className="gap-6">
-            <H1>Plan Editor</H1>
+            <H1>{isCreateMode ? "Create Plan" : "Plan Editor"}</H1>
 
             <Card variant={"accent"} className="items-start gap-4">
                 <Div className="w-full gap-2">
-                    <H2 className="text-white">Shape your training library</H2>
+                    <H2 className="text-white">{isCreateMode ? "Start a new training cycle" : "Shape your training library"}</H2>
                     <P className="max-w-[320px] text-white/85">
-                        Edit the selected plan without jumping back into onboarding, or spin up a second version for a new phase.
+                        {isCreateMode
+                            ? "Build a fresh plan from scratch, then add exercises once the structure is saved."
+                            : "Edit the selected plan without jumping back into onboarding, or spin up a second version for a new phase."}
                     </P>
                 </Div>
                 <Row className="gap-3">
                     <EditorPill label="Saved plans" value={`${(plans ?? []).length}`} />
                     <EditorPill
                         label="Active moves"
-                        value={`${activePlan?.days.reduce((sum: number, day: any) => sum + (day.exercises?.length ?? 0), 0) ?? 0}`}
+                        value={`${selectedPlan?.days.reduce((sum: number, day: any) => sum + (day.exercises?.length ?? 0), 0) ?? 0}`}
                     />
                 </Row>
             </Card>
 
-            <PlanCarousel
-                plans={plans}
-                selectedPlanId={activePlan?.localId ?? null}
-                onSelect={setSelectedPlanId}
-                title="Plan carousel"
-                subtitle="Choose the plan you want to refine before making changes."
-            />
+            {!isCreateMode ? (
+                <PlanCarousel
+                    plans={plans}
+                    selectedPlanId={selectedPlan?.localId ?? null}
+                    onSelect={setSelectedPlanId}
+                    title="Plan carousel"
+                    subtitle="Choose the plan you want to refine before making changes."
+                />
+            ) : null}
 
             <Card className="gap-5">
                 <SectionTitle eyebrow="Structure" title="Plan identity" note="Set the split, goal, and cadence that define this cycle." />
@@ -279,23 +291,31 @@ export default function PlanEditorScreen() {
                 <SectionTitle
                     eyebrow="Next step"
                     title="Exercise management"
-                    note="This editor handles plan structure. Use the Add screen to create or expand the movement library for the active plan."
+                    note={
+                        isCreateMode
+                            ? "Save the plan first, then use the Add screen to build out the movement library."
+                            : "This editor handles plan structure. Use the Add screen to create or expand the movement library for the active plan."
+                    }
                 />
 
-                <NavLink href={"/(tabs)/add"} variant={"outline"}>
-                    Open Add Screen
-                </NavLink>
+                {!isCreateMode ? (
+                    <NavLink href={"/(tabs)/add"} variant={"outline"}>
+                        Open Add Screen
+                    </NavLink>
+                ) : null}
             </Card>
 
             <Button onPress={methods.handleSubmit((values) => savePlan(values, false))} disabled={isSubmitting}>
-                {isSubmitting ? "Saving..." : "Save Changes"}
+                {isSubmitting ? "Saving..." : isCreateMode ? "Create Plan" : "Save Changes"}
             </Button>
 
-            <Button variant="outline" onPress={methods.handleSubmit((values) => savePlan(values, true))} disabled={isSubmitting}>
-                {isSubmitting ? "Saving..." : "Save As New Plan"}
-            </Button>
+            {!isCreateMode ? (
+                <Button variant="outline" onPress={methods.handleSubmit((values) => savePlan(values, true))} disabled={isSubmitting}>
+                    {isSubmitting ? "Saving..." : "Save As New Plan"}
+                </Button>
+            ) : null}
 
-            {activePlan && plans.length > 1 ? (
+            {selectedPlan && plans.length > 1 ? (
                 <Button
                     variant="destructive"
                     onPress={() =>
@@ -307,7 +327,7 @@ export default function PlanEditorScreen() {
                                 onPress: async () => {
                                     if (isDeleting) return;
                                     setIsDeleting(true);
-                                    const result = await deleteWorkoutPlan(user.localId, activePlan.localId);
+                                    const result = await deleteWorkoutPlan(user.localId, selectedPlan.localId);
                                     if (!result.success) {
                                         toast.error("Could not delete plan");
                                         setIsDeleting(false);

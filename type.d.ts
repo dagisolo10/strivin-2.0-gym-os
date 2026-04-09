@@ -1,6 +1,6 @@
 import * as schema from "@/db/sqlite";
 import { weekdays } from "@/constants/data";
-import { Exercise, ExerciseLog } from "@/types/model";
+import { Exercise, ExerciseLog } from "@/types/types";
 import type { ImageSourcePropType } from "react-native";
 import type { ExpoSQLiteDatabase } from "drizzle-orm/expo-sqlite";
 

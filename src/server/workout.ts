@@ -1,7 +1,6 @@
 import { getDb } from "@/db/client";
 import * as schema from "@/db/sqlite";
 import { randomUUID } from "expo-crypto";
-import { weekdays } from "@/constants/data";
 import { and, eq, inArray } from "drizzle-orm";
 import { enqueueWrite } from "@/db/write-queue";
 import { getDateKey, getWeekdayName, sortWorkoutDays } from "@/lib/helper-functions";
@@ -51,9 +50,6 @@ export async function logExerciseSet(data: LogData) {
                         isDeleted: false,
                     });
 
-                    // session = await tx.query.workoutSessions.findFirst({
-                    //     where: (fields, { and, eq }) => and(eq(fields.userId, userId), eq(fields.date, dateKey)),
-                    // });
                     sessionId = newId;
                     session = { localId: newId, userId, date: dateKey } as any;
                 }
@@ -87,6 +83,7 @@ export async function logExerciseSet(data: LogData) {
 
 async function updateStreak(db: DB, activePlan: WorkoutPlanWithDays) {
     await db.transaction(async (tx) => {
+        const todayKey = getDateKey();
         const planDays = sortWorkoutDays(activePlan.days.map((day) => day.dayName));
 
         const prevWeekDay = getPreviousWorkoutDay(planDays);
@@ -99,12 +96,14 @@ async function updateStreak(db: DB, activePlan: WorkoutPlanWithDays) {
             .select({
                 currentStreak: schema.users.currentStreak,
                 longestStreak: schema.users.longestStreak,
+                lastStreakAwardedAt: schema.users.lastStreakAwardedAt,
             })
             .from(schema.users)
             .where(eq(schema.users.localId, activePlan.userId))
             .limit(1);
 
         if (!user) return;
+        if (user.lastStreakAwardedAt === todayKey) return;
 
         const [lastPerfectSession] = await tx
             .select()
@@ -124,6 +123,7 @@ async function updateStreak(db: DB, activePlan: WorkoutPlanWithDays) {
                 .set({
                     currentStreak: 1,
                     longestStreak: Math.max(1, user.longestStreak ?? 0),
+                    lastStreakAwardedAt: todayKey,
                 })
                 .where(eq(schema.users.localId, activePlan.userId));
 
@@ -137,6 +137,7 @@ async function updateStreak(db: DB, activePlan: WorkoutPlanWithDays) {
             .set({
                 currentStreak: newStreak,
                 longestStreak: Math.max(newStreak, user.longestStreak ?? 0),
+                lastStreakAwardedAt: todayKey,
             })
             .where(eq(schema.users.localId, activePlan.userId));
     });
@@ -144,6 +145,7 @@ async function updateStreak(db: DB, activePlan: WorkoutPlanWithDays) {
 
 function getPreviousDateForWeekday(prevWeekDay: Weekday): string {
     const today = new Date();
+    const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
     const todayIndex = today.getDay();
     const targetIndex = weekdays.indexOf(prevWeekDay);
@@ -171,11 +173,24 @@ export function computePerfectDay(activePlan: WorkoutPlanWithDays | null, todays
 
     const todaysExercises = workoutDay.exercises;
 
-    const requiredSets = todaysExercises.reduce((sum, ex) => sum + (ex.sets ?? 0), 0);
+    if (todaysExercises.length === 0) return false;
 
-    const completedSets = todaysSession.logs.length;
+    const logsByExerciseId = new Map<string, number>();
+    for (const log of todaysSession.logs) {
+        const currentCount = logsByExerciseId.get(log.exerciseId) ?? 0;
+        logsByExerciseId.set(log.exerciseId, currentCount + 1);
+    }
 
-    return completedSets >= requiredSets;
+    for (const exercise of todaysExercises) {
+        const requiredSets = exercise.sets ?? 1;
+        const completedSets = logsByExerciseId.get(exercise.localId) ?? 0;
+
+        if (completedSets < requiredSets) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 export async function resetLocalUserData() {
@@ -222,17 +237,14 @@ export async function getRecentLogsForExercise(userId: string, exerciseId: strin
 
 export async function getUser(userId: string) {
     const database = getDb()!;
-    // Get user
+
     const [user] = await database.select().from(schema.users).where(eq(schema.users.localId, userId)).limit(1);
     if (!user) return null;
 
-    // Get user's plans
     const plans = await database.select().from(schema.workoutPlans).where(eq(schema.workoutPlans.userId, userId));
 
-    // Get user's sessions
     const sessions = await database.select().from(schema.workoutSessions).where(eq(schema.workoutSessions.userId, userId));
 
-    // Build plans with days and exercises with logs
     const plansWithDays = await Promise.all(
         plans.map(async (plan: { localId: string }) => {
             const days = await database.select().from(schema.workoutDays).where(eq(schema.workoutDays.planId, plan.localId));
@@ -256,7 +268,6 @@ export async function getUser(userId: string) {
         }),
     );
 
-    // Build sessions with logs and exercises
     const sessionsWithLogs = await Promise.all(
         sessions.map(async (session: { localId: string }) => {
             const logs = await database.select().from(schema.exerciseLogs).where(eq(schema.exerciseLogs.sessionId, session.localId));

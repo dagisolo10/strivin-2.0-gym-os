@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
 import Header from "@/components/home/header";
 import { useHomeData } from "@/hooks/use-home";
 import RestDay from "@/components/home/rest-day";
 import { useAppData } from "@/hooks/use-app-data";
 import Snapshot from "@/components/home/snapshot";
+import { computePerfectDay } from "@/server/workout";
+import { useEffect, useMemo, useState } from "react";
 import { usePlanStore } from "@/store/use-plan-store";
 import StatusCard from "@/components/home/status-card";
-import { FlatList } from "react-native-gesture-handler";
+import { FlatList } from "react-native";
 import { getWeekdayName } from "@/lib/helper-functions";
 import DayCarousel from "@/components/home/day-carousel";
 import ExerciseCard from "@/components/home/exercise-card";
@@ -27,10 +28,16 @@ export default function HomeScreen() {
     const syncSelectedPlan = usePlanStore((state) => state.syncSelectedPlan);
     const selectedPlanId = usePlanStore((state) => state.selectedPlanId);
     const activePlan = enrichedPlans.find((plan) => plan.localId === selectedPlanId) ?? enrichedPlans[0] ?? null;
+    const isWorkoutDay = Boolean(activePlan?.days.some((day) => day.dayName === selectedDayName));
     const { tables, values } = useHomeData(selectedDayName, { activePlan, workoutDays, sessions: sessionsWithLogs, logs });
 
+    const isPerfectDay = useMemo(() => {
+        if (!activePlan || !tables.todaysSession) return false;
+        return computePerfectDay(activePlan, tables.todaysSession);
+    }, [activePlan, tables.todaysSession]);
+
     useEffect(() => {
-        if (enrichedPlans) syncSelectedPlan(enrichedPlans.map((plan) => plan.localId));
+        if (enrichedPlans.length) syncSelectedPlan(enrichedPlans.map((plan) => plan.localId));
     }, [enrichedPlans, syncSelectedPlan]);
 
     if (isLoading) return <LoadingScreen />;
@@ -44,14 +51,6 @@ export default function HomeScreen() {
                     <Div className="gap-6">
                         <Header user={{ ...user, plans, sessions: sessionsWithLogs }} />
 
-                        <StatusCard
-                            plan={activePlan}
-                            progress={values.progress}
-                            totalSets={values.totalSets}
-                            currentStreak={user.currentStreak ?? 0}
-                            longestStreak={user.longestStreak ?? 0}
-                            completedSets={values.completedSets}
-                        />
                         <StatusCard
                             plan={activePlan}
                             progress={values.progress}
@@ -75,29 +74,29 @@ export default function HomeScreen() {
 
                         <Row className="mb-2">
                             <H3>{tables.workoutDay?.dayName === getWeekdayName() ? "Today's Routine" : `${selectedDayName}'s Routine`}</H3>
-                            <Badge variant={tables.todaysSession?.perfectDay ? "success" : "outline"}>
-                                {tables.todaysSession?.perfectDay ? "Perfect Day" : "In Progress"}
+                            <Badge variant={isPerfectDay ? "success" : "outline"}>
+                                {!tables.todaysSession ? "Not Started" : isPerfectDay ? "Perfect Day" : "In Progress"}
                             </Badge>
                         </Row>
                     </Div>
                 }
                 ListFooterComponent={() => <Separator vertical />}
                 data={tables.todaysExercises}
-                extraData={`${updatedAt}-${values.completedSets}-${tables.todaysExercises?.length ?? 0}`}
+                extraData={`${updatedAt}-${expandedExerciseId}-${values.completedSets}-${tables.todaysExercises?.length ?? 0}`}
                 keyExtractor={(ex) => String(ex.localId)}
                 showsVerticalScrollIndicator={false}
                 contentContainerClassName="pb-24"
                 ItemSeparatorComponent={() => <Separator vertical size={12} />}
-                ListEmptyComponent={<RestDay selectedDayName={selectedDayName} />}
+                ListEmptyComponent={<RestDay selectedDayName={selectedDayName} isWorkoutDay={isWorkoutDay} />}
                 renderItem={({ item: exercise }) => (
-                    <ExerciseCard
-                        userId={user.localId}
-                        exercise={exercise}
-                        selectedDayName={selectedDayName}
-                        expandedId={expandedExerciseId}
-                        logs={tables.todaysLogsByExerciseId[exercise.localId] ?? []}
-                        onPress={() => setExpandedExerciseId((currentId) => (currentId === exercise.localId ? null : exercise.localId))}
-                    />
+                        <ExerciseCard
+                            userId={user.localId}
+                            exercise={exercise}
+                            selectedDayName={selectedDayName}
+                            expandedId={expandedExerciseId}
+                            logs={tables.todaysLogsByExerciseId[exercise.localId] ?? []}
+                            onPress={() => setExpandedExerciseId((currentId) => (currentId === exercise.localId ? null : exercise.localId))}
+                        />
                 )}
             />
         </Screen>

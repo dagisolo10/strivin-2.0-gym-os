@@ -17,10 +17,11 @@
                 "backgroundImage": "./assets/images/android-icon-background.png",
                 "monochromeImage": "./assets/images/android-icon-monochrome.png"
             },
-            "predictiveBackGestureEnabled": false
+            "predictiveBackGestureEnabled": false,
+            "package": "com.dagisolo.strivin"
         },
         "web": {
-            "output": "static",
+            "output": "single",
             "favicon": "./assets/images/favicon.png"
         },
         "plugins": [
@@ -66,6 +67,12 @@
         "experiments": {
             "typedRoutes": true,
             "reactCompiler": true
+        },
+        "extra": {
+            "router": {},
+            "eas": {
+                "projectId": "150a1426-52b2-40aa-aba8-5cfd1d8a456d"
+            }
         }
     }
 }

@@ -2,11 +2,13 @@
 
 import journal from './meta/_journal.json';
 import m0000 from './0000_fancy_nightmare.sql';
+import m0001 from './0001_streak_guard.sql';
 
   export default {
     journal,
     migrations: {
-      m0000
+      m0000,
+      m0001
     }
   }
   

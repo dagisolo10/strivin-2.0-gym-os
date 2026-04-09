@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Exercise } from "@/types/model";
+import { Exercise } from "@/types/types";
 
 interface OnboardingState {
     name: string;

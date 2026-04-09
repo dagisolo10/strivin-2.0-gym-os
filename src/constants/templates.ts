@@ -1,5 +1,5 @@
 // --- PPL Split Templates ---
-import { Exercise } from "@/types/model";
+import { Exercise } from "@/types/types";
 
 export const PUSH_DAY_TEMPLATE: Partial<Exercise>[] = [
     { name: "Bench Press", sets: 3, reps: 10, weight: 60, unit: "kg", type: "Push", variant: "Upper" },

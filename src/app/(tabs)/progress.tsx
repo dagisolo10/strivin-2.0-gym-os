@@ -1,8 +1,7 @@
 import { useEffect, useMemo } from "react";
-import { ActivityIndicator } from "react-native";
+import { ActivityIndicator, FlatList } from "react-native";
 import { useAppData } from "@/hooks/use-app-data";
 import { usePlanStore } from "@/store/use-plan-store";
-import { FlatList } from "react-native-gesture-handler";
 import { formatDateLabel } from "@/lib/helper-functions";
 import { PlanCarousel } from "@/components/plans/plan-carousel";
 import { Badge, Card, Div, H1, H2, H3, P, Row, Screen } from "@/components/ui/display";
