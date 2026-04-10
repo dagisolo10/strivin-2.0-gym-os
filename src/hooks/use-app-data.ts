@@ -159,13 +159,12 @@ export function useAppData(options: UseAppDataOptions = {}) {
 
     const plansLoadedForCurrentUser = userId === EMPTY_ID || loadedPlansUserId === userId;
 
-    const isLoading =
-        userLoading ||
-        (includeWorkoutHistory
-            ? !sessionsUpdatedAt || !logsUpdatedAt || (!userUpdatedAt && user === null)
-            : includePlanDetails
-              ? !workoutDaysUpdatedAt || !exercisesUpdatedAt || !plansLoadedForCurrentUser || !userUpdatedAt
-              : !plansLoadedForCurrentUser || !userUpdatedAt);
+    const needsUser = !userUpdatedAt && user === null;
+    const needsPlans = !plansLoadedForCurrentUser || !userUpdatedAt;
+    const needsPlanDetails = includePlanDetails && (!workoutDaysUpdatedAt || !exercisesUpdatedAt);
+    const needsWorkoutHistory = includeWorkoutHistory && (!sessionsUpdatedAt || !logsUpdatedAt);
+
+    const isLoading = userLoading || needsUser || needsPlans || needsPlanDetails || needsWorkoutHistory;
 
     return {
         user,

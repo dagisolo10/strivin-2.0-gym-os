@@ -44,21 +44,21 @@ export default function HomeScreen() {
 
     if (isLoading) return <LoadingScreen />;
 
-    if (!localUserId || !activePlan) return <ErrorScreen message="Finish your setup to unlock your dashboard." href="/onboarding" button="Open onboarding" />;
+    if (!localUserId || !user || !activePlan) return <ErrorScreen message="Finish your setup to unlock your dashboard." href="/onboarding" button="Open onboarding" />;
 
     return (
         <Screen nonScrollable>
             <FlatList
                 ListHeaderComponent={
                     <Div className="gap-6">
-                        <Header user={{ ...user!, plans, sessions: sessionsWithLogs }} />
+                        <Header user={{ ...user, plans, sessions: sessionsWithLogs }} />
 
                         <StatusCard
                             plan={activePlan}
                             progress={values.progress}
                             totalSets={values.totalSets}
-                            currentStreak={user!.currentStreak ?? 0}
-                            longestStreak={user!.longestStreak ?? 0}
+                            currentStreak={user.currentStreak ?? 0}
+                            longestStreak={user.longestStreak ?? 0}
                             completedSets={values.completedSets}
                         />
 

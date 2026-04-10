@@ -39,35 +39,44 @@ export function useUser() {
 
     // Fetch user when supabaseUserId changes
     useEffect(() => {
+        let cancelled = false;
         const fetchUser = async () => {
             try {
                 setLoading(true);
                 setError(null);
 
                 if (!supabaseUserId) {
-                    setUser(null);
-                    setLocalUserId(null);
-                    setUpdatedAt(new Date());
+                    if (!cancelled) {
+                        setUser(null);
+                        setLocalUserId(null);
+                        setUpdatedAt(new Date());
+                    }
                     return;
                 }
 
                 const db = getDb();
                 const userData = await db.select().from(users).where(eq(users.supabaseId, supabaseUserId)).limit(1);
 
+                if (cancelled) return;
+
                 const foundUser = userData[0] || null;
                 setUser(foundUser);
                 setLocalUserId(foundUser?.localId ?? null);
                 setUpdatedAt(new Date());
             } catch (err) {
+                if (cancelled) return;
                 console.error("Error fetching user:", err);
                 setError(err);
                 setUpdatedAt(new Date());
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         };
 
         fetchUser();
+        return () => {
+            cancelled = true;
+        };
     }, [supabaseUserId, setLocalUserId]);
 
     // Reset onboarding on user switch

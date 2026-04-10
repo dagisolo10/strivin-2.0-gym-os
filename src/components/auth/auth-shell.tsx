@@ -66,7 +66,7 @@ export function Divider() {
 
 export function SocialButton({ onPress }: { onPress: () => void }) {
     return (
-        <Button component variant={"outline"} className="gap-2">
+        <Button onPress={onPress} component variant={"outline"} className="gap-2">
             <AntDesign name="google" size={18} color="cornflowerblue" />
             <P className="text-foreground font-semibold">Google</P>
         </Button>

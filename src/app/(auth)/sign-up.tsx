@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import * as WebBrowser from "expo-web-browser";
 import { ActivityIndicator } from "react-native";
+import { Eye, EyeOff } from "lucide-react-native";
 import { makeRedirectUri } from "expo-auth-session";
 import { Div, Field, P } from "@/components/ui/display";
 import { Button, Input } from "@/components/ui/interactive";
@@ -18,6 +19,9 @@ export default function SignUp() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [passwordVisible, setPasswordVisible] = useState(false);
+    const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
+    const [confirmPassword, setConfirmPassword] = useState("");
     const [verificationCode, setVerificationCode] = useState("");
 
     const handleGoogle = async () => {
@@ -29,21 +33,30 @@ export default function SignUp() {
     };
 
     const onSignUp = async () => {
-        console.log("Starting sign up for:", email);
+        if (isSubmitting) return;
 
         setAuthError(null);
+
+        if (password !== confirmPassword) {
+            setAuthError("Passwords do not match.");
+            return;
+        }
+
         setIsSubmitting(true);
 
-        const { data, error } = await supabase.auth.signUp({ email, password });
+        try {
+            const { data, error } = await supabase.auth.signUp({ email, password });
 
-        if (error) return setAuthError(error.message);
+            if (error) return setAuthError(error.message);
 
-        if (data.user && !data.session) {
-            setIsVerifying(true);
-        } else if (data.session) {
-            router.replace("/onboarding");
+            if (data.user && !data.session) {
+                setIsVerifying(true);
+            } else if (data.session) {
+                router.replace("/onboarding");
+            }
+        } finally {
+            setIsSubmitting(false);
         }
-        setIsSubmitting(false);
     };
 
     const onVerify = async () => {
@@ -69,7 +82,21 @@ export default function SignUp() {
                         </Field>
 
                         <Field label="Password">
-                            <Input placeholder="********" value={password} onChangeText={setPassword} secureTextEntry />
+                            <Div className="relative">
+                                <Input placeholder="********" value={password} onChangeText={setPassword} secureTextEntry={passwordVisible} />
+                                <Button onPress={() => setPasswordVisible((visible) => !visible)} className="absolute top-1/2 right-0 -translate-y-1/2 opacity-50" variant="ghost" size={"icon"}>
+                                    {passwordVisible ? <Eye size={16} /> : <EyeOff size={16} />}
+                                </Button>
+                            </Div>
+                        </Field>
+
+                        <Field label="Confirm Password">
+                            <Div className="relative">
+                                <Input placeholder="Confirm password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry={confirmPasswordVisible} />
+                                <Button onPress={() => setConfirmPasswordVisible((visible) => !visible)} className="absolute top-1/2 right-0 -translate-y-1/2 opacity-50" variant="ghost" size={"icon"}>
+                                    {confirmPasswordVisible ? <Eye size={16} /> : <EyeOff size={16} />}
+                                </Button>
+                            </Div>
                         </Field>
 
                         <Divider />

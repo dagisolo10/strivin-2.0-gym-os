@@ -32,10 +32,15 @@ export default function Index() {
         const inAuthGroup = segments[0] === "(auth)";
         const inOnboarding = segments[0] === "onboarding";
 
-        if (!session && !inAuthGroup) return router.replace("/(auth)/sign-up");
+        if (!session) {
+            if (!inAuthGroup) router.replace("/(auth)/sign-up");
+            return;
+        }
 
-        if (session && !user && !inOnboarding) return router.replace("/onboarding");
-
+        if (!user) {
+            if (!inOnboarding) router.replace("/onboarding");
+            return;
+        }
         const hasPlans = plans.length > 0;
         const destination = hasPlans ? "/(tabs)/home" : "/onboarding";
 

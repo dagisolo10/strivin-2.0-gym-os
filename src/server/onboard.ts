@@ -32,14 +32,19 @@ export async function registerUser(data: OnboardingState) {
     const db = getDb();
     const {
         data: { session },
+        error: sessionError,
     } = await supabase.auth.getSession();
+
+    if (sessionError || !session?.user?.id) {
+        throw new Error("Authenticated Supabase session is required before onboarding.");
+    }
 
     return enqueueWrite(() =>
         db.transaction(async (tx) => {
             const [user] = await tx
                 .insert(users)
                 .values({
-                    supabaseId: session?.user.id,
+                    supabaseId: session.user.id,
                     name: data.name,
                     profile: data.profile,
                 })

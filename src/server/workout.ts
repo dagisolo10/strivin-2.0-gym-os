@@ -188,6 +188,8 @@ export function computePerfectDay(activePlan: WorkoutPlanWithDays | null, todays
 }
 
 export async function resetLocalUserData(localUserId: string) {
+    if (!localUserId) throw new Error("resetLocalUserData requires a valid localUserId");
+
     const database = getDb();
 
     await enqueueWrite(() =>
