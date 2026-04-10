@@ -1,3 +1,4 @@
+import { FlatList } from "react-native";
 import Header from "@/components/home/header";
 import { useHomeData } from "@/hooks/use-home";
 import RestDay from "@/components/home/rest-day";
@@ -5,9 +6,9 @@ import { useAppData } from "@/hooks/use-app-data";
 import Snapshot from "@/components/home/snapshot";
 import { computePerfectDay } from "@/server/workout";
 import { useEffect, useMemo, useState } from "react";
+import { useAuthStore } from "@/store/use-auth-store";
 import { usePlanStore } from "@/store/use-plan-store";
 import StatusCard from "@/components/home/status-card";
-import { FlatList } from "react-native";
 import { getWeekdayName } from "@/lib/helper-functions";
 import DayCarousel from "@/components/home/day-carousel";
 import ExerciseCard from "@/components/home/exercise-card";
@@ -23,6 +24,7 @@ export default function HomeScreen() {
         includePlanDetails: true,
         includeWorkoutHistory: true,
     });
+    const localUserId = useAuthStore((state) => state.localUserId);
 
     const setSelectedPlanId = usePlanStore((state) => state.setSelectedPlanId);
     const syncSelectedPlan = usePlanStore((state) => state.syncSelectedPlan);
@@ -42,7 +44,7 @@ export default function HomeScreen() {
 
     if (isLoading) return <LoadingScreen />;
 
-    if (!user || !activePlan) return <ErrorScreen message="Finish your setup to unlock your dashboard." href="/onboarding" button="Open onboarding" />;
+    if (!localUserId || !user || !activePlan) return <ErrorScreen message="Finish your setup to unlock your dashboard." href="/onboarding" button="Open onboarding" />;
 
     return (
         <Screen nonScrollable>
@@ -74,9 +76,7 @@ export default function HomeScreen() {
 
                         <Row className="mb-2">
                             <H3>{tables.workoutDay?.dayName === getWeekdayName() ? "Today's Routine" : `${selectedDayName}'s Routine`}</H3>
-                            <Badge variant={isPerfectDay ? "success" : "outline"}>
-                                {!tables.todaysSession ? "Not Started" : isPerfectDay ? "Perfect Day" : "In Progress"}
-                            </Badge>
+                            <Badge variant={isPerfectDay ? "success" : "outline"}>{!tables.todaysSession ? "Not Started" : isPerfectDay ? "Perfect Day" : "In Progress"}</Badge>
                         </Row>
                     </Div>
                 }
@@ -89,14 +89,14 @@ export default function HomeScreen() {
                 ItemSeparatorComponent={() => <Separator vertical size={12} />}
                 ListEmptyComponent={<RestDay selectedDayName={selectedDayName} isWorkoutDay={isWorkoutDay} />}
                 renderItem={({ item: exercise }) => (
-                        <ExerciseCard
-                            userId={user.localId}
-                            exercise={exercise}
-                            selectedDayName={selectedDayName}
-                            expandedId={expandedExerciseId}
-                            logs={tables.todaysLogsByExerciseId[exercise.localId] ?? []}
-                            onPress={() => setExpandedExerciseId((currentId) => (currentId === exercise.localId ? null : exercise.localId))}
-                        />
+                    <ExerciseCard
+                        userId={localUserId}
+                        exercise={exercise}
+                        selectedDayName={selectedDayName}
+                        expandedId={expandedExerciseId}
+                        logs={tables.todaysLogsByExerciseId[exercise.localId] ?? []}
+                        onPress={() => setExpandedExerciseId((currentId) => (currentId === exercise.localId ? null : exercise.localId))}
+                    />
                 )}
             />
         </Screen>

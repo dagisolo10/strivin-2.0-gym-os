@@ -8,38 +8,32 @@ import migrations from "@/drizzle/migrations";
 import { getDb, getExpoDb } from "@/db/client";
 import * as Sentry from "@sentry/react-native";
 import { SplashScreen, Stack } from "expo-router";
+import React, { Suspense, useEffect } from "react";
 import { PostHogProvider } from "posthog-react-native";
 import { DrizzleProvider } from "@/context/db-provider";
-import { ClerkProvider, ClerkLoaded } from "@clerk/expo";
 import { useDrizzleStudio } from "expo-drizzle-studio-plugin";
 import { useMigrations } from "drizzle-orm/expo-sqlite/migrator";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ErrorScreen, LoadingScreen } from "@/components/ui/screen-ui";
-import React, { Suspense, useEffect, useState, useCallback } from "react";
 
 SplashScreen.preventAutoHideAsync();
-Sentry.init({ dsn: process.env.EXPO_PUBLIC_SENTRY_DSN, debug: __DEV__ });
-const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
+Sentry.init({ dsn: process.env.EXPO_PUBLIC_SENTRY_DSN, debug: false });
 
 function RootLayout() {
     const expoDB = getExpoDb();
     const drizzleDB = getDb();
 
     const [fontsLoaded, fontError] = useFonts(fonts);
-    const [isClerkLoaded, setIsClerkLoaded] = useState(false);
 
     const { error, success } = useMigrations(drizzleDB, migrations);
     useDrizzleStudio(success ? expoDB : null);
 
-    const handleClerkReady = useCallback(() => setIsClerkLoaded(true), []);
-    const isReady = (fontsLoaded || fontError) && (success || error) && isClerkLoaded;
+    const isReady = (fontsLoaded || fontError) && (success || error);
 
     useEffect(() => {
         if (isReady) SplashScreen.hideAsync();
     }, [isReady]);
-
-    if (!publishableKey) throw Error("Add your Clerk Publishable Key to the .env file");
 
     const renderContent = () => {
         if (error || fontError) return <ErrorScreen message={error?.message || fontError?.message} />;
@@ -61,22 +55,8 @@ function RootLayout() {
         </GestureHandlerRootView>
     );
 
-    return (
-        <ClerkProvider publishableKey={publishableKey}>
-            <ClerkLoaded>
-                <ClerkReadyHandler onReady={handleClerkReady} />
-                {posthog ? <PostHogProvider client={posthog}>{layoutContent}</PostHogProvider> : layoutContent}
-            </ClerkLoaded>
-        </ClerkProvider>
-    );
+    return posthog ? <PostHogProvider client={posthog}>{layoutContent}</PostHogProvider> : layoutContent;
 }
-
-const ClerkReadyHandler = ({ onReady }: { onReady: () => void }) => {
-    useEffect(() => {
-        onReady();
-    }, [onReady]);
-    return null;
-};
 
 const fonts = {
     "sans-regular": require("../../assets/fonts/PlusJakartaSans-Regular.ttf"),

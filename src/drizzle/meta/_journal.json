@@ -5,15 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1775665068668,
-      "tag": "0000_fancy_nightmare",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1775750400000,
-      "tag": "0001_streak_guard",
+      "when": 1775847903680,
+      "tag": "0000_mysterious_albert_cleary",
       "breakpoints": true
     }
   ]

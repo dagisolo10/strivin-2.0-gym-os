@@ -7,6 +7,7 @@ import { toast } from "react-native-sonner";
 import { useAppData } from "@/hooks/use-app-data";
 import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
+import { useAuthStore } from "@/store/use-auth-store";
 import { usePlanStore } from "@/store/use-plan-store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -25,7 +26,8 @@ export default function PlanEditorScreen() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    const { user, enrichedPlans: plans, exercises } = useAppData({ includePlanDetails: true, includeWorkoutHistory: true });
+    const { enrichedPlans: plans, exercises } = useAppData({ includePlanDetails: true, includeWorkoutHistory: true });
+    const localUserId = useAuthStore((state) => state.localUserId);
     const { activePlan } = usePlan();
 
     const setSelectedPlanId = usePlanStore((state) => state.setSelectedPlanId);
@@ -34,10 +36,7 @@ export default function PlanEditorScreen() {
     const isCreateMode = params.mode === "new";
     const selectedPlan = isCreateMode ? null : activePlan;
 
-    const defaultWorkoutDays = useMemo(
-        () => (selectedPlan?.days.map((day) => day.dayName) ?? ["Monday", "Wednesday", "Friday"]) as Weekday[],
-        [selectedPlan?.days],
-    );
+    const defaultWorkoutDays = useMemo(() => (selectedPlan?.days.map((day) => day.dayName) ?? ["Monday", "Wednesday", "Friday"]) as Weekday[], [selectedPlan?.days]);
 
     useEffect(() => {
         syncSelectedPlan(plans.map((plan) => plan.localId));
@@ -65,7 +64,7 @@ export default function PlanEditorScreen() {
         });
     }, [selectedPlan?.fitnessLevel, selectedPlan?.goal, selectedPlan?.split, defaultWorkoutDays, resetForm]);
 
-    if (!user) {
+    if (!localUserId) {
         return (
             <Screen className="items-center justify-center gap-4 px-6">
                 <H2 className="text-center">Finish your setup to start building plans.</H2>
@@ -98,7 +97,7 @@ export default function PlanEditorScreen() {
         setIsSubmitting(true);
         try {
             const request = saveWorkoutPlan({
-                userId: user.localId,
+                userId: localUserId,
                 planId: createNew || isCreateMode ? undefined : selectedPlan?.localId,
                 split: values.split as WorkoutSplit,
                 workoutDays: values.workoutDays as Weekday[],
@@ -143,10 +142,7 @@ export default function PlanEditorScreen() {
                 </Div>
                 <Row className="gap-3">
                     <EditorPill label="Saved plans" value={`${(plans ?? []).length}`} />
-                    <EditorPill
-                        label="Active moves"
-                        value={`${selectedPlan?.days.reduce((sum: number, day: any) => sum + (day.exercises?.length ?? 0), 0) ?? 0}`}
-                    />
+                    <EditorPill label="Active moves" value={`${selectedPlan?.days.reduce((sum: number, day: any) => sum + (day.exercises?.length ?? 0), 0) ?? 0}`} />
                 </Row>
             </Card>
 
@@ -214,11 +210,7 @@ export default function PlanEditorScreen() {
             </Card>
 
             <Card className="gap-5">
-                <SectionTitle
-                    eyebrow="Performance"
-                    title="Training profile"
-                    note="Tune the intent of the plan so the rest of the app presents the right cues."
-                />
+                <SectionTitle eyebrow="Performance" title="Training profile" note="Tune the intent of the plan so the rest of the app presents the right cues." />
 
                 <Controller
                     control={methods.control}
@@ -327,7 +319,7 @@ export default function PlanEditorScreen() {
                                 onPress: async () => {
                                     if (isDeleting) return;
                                     setIsDeleting(true);
-                                    const result = await deleteWorkoutPlan(user.localId, selectedPlan.localId);
+                                    const result = await deleteWorkoutPlan(localUserId, selectedPlan.localId);
                                     if (!result.success) {
                                         toast.error("Could not delete plan");
                                         setIsDeleting(false);

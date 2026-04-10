@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "7ea10b2e-77de-46e4-9d37-6b9c2dd004f9",
+  "id": "18306715-ae8f-4ce2-96d6-7c0b2adaab2b",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "exercise_logs": {
@@ -400,6 +400,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "supabase_id": {
+          "name": "supabase_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "name": {
           "name": "name",
           "type": "text",
@@ -430,6 +437,13 @@
           "autoincrement": false,
           "default": 0
         },
+        "last_streak_awarded_at": {
+          "name": "last_streak_awarded_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "text",
@@ -455,7 +469,15 @@
           "default": "(CURRENT_TIMESTAMP)"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "users_supabase_id_unique": {
+          "name": "users_supabase_id_unique",
+          "columns": [
+            "supabase_id"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},

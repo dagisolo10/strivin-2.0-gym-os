@@ -18,8 +18,7 @@ export const exerciseSchema = z
     })
     .superRefine((data, ctx) => {
         if (data.type === "Cardio") {
-            if (!data.duration || data.duration < 1)
-                ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Duration is required for Cardio", path: ["duration"] });
+            if (!data.duration || data.duration < 1) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Duration is required for Cardio", path: ["duration"] });
             if (data.distance === undefined || data.distance === null || data.distance < 1)
                 ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Distance is required for Cardio", path: ["distance"] });
             if (!data.unit) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Must choose unit", path: ["unit"] });
@@ -55,3 +54,25 @@ export const planEditorSchema = z.object({
     sessionLength: z.number().min(15).max(180).optional(),
     fitnessLevel: z.enum(["Beginner", "Intermediate", "Advanced"]).optional(),
 });
+
+export const signUpSchema = z
+    .object({
+        email: z.string().trim().email("Enter a valid email address"),
+        password: z.string().min(8, "Password must be at least 8 characters"),
+        confirmPassword: z.string().min(1, "Confirm your password"),
+    })
+    .superRefine(({ password, confirmPassword }, ctx) => {
+        if (password !== confirmPassword) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ["confirmPassword"],
+                message: "Passwords do not match",
+            });
+        }
+    });
+
+    export const signInSchema = z.object({
+        email: z.string().trim().email("Enter a valid email address"),
+        password: z.string().min(1, "Enter your password"),
+    });
+    
