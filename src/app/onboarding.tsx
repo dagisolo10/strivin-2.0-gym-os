@@ -15,11 +15,11 @@ import Exercises from "@/components/onboarding/exercises";
 import Frequency from "@/components/onboarding/frequency";
 import { STEP_CONTENT, TOTAL_STEPS } from "@/constants/data";
 import Intro from "@/components/onboarding/floating-barbell";
-import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useOnboardingStore } from "@/store/use-onboarding-store";
-import { Badge, Card, Div, H1, P, Row } from "@/components/ui/display";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { Badge, Card, Div, H1, P, Row } from "@/components/ui/display";
+import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import Animated, { FadeInRight, FadeInUp, FadeOutLeft, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 
 type OnboardingFormValues = z.input<typeof onboardingSchema>;
@@ -31,6 +31,7 @@ export default function Onboarding() {
     const translateY = useSharedValue(0);
 
     const updateField = useOnboardingStore((state) => state.updateField);
+    const resetOnboarding = useOnboardingStore((state) => state.reset);
 
     const storedName = useOnboardingStore((state) => state.name);
     const storedSplit = useOnboardingStore((state) => state.split);
@@ -107,6 +108,7 @@ export default function Onboarding() {
                     fitnessLevel: currentValues.fitnessLevel as FitnessLevel | null,
                     profile: currentValues.profile || null,
                 });
+                resetOnboarding();
                 router.replace("/(tabs)/home");
             } catch (error) {
                 console.error("Failed to save onboarding data:", error);
@@ -175,11 +177,7 @@ export default function Onboarding() {
                                 Back
                             </Button>
                         ) : null}
-                        <Button
-                            variant={step === TOTAL_STEPS ? "success" : "primary"}
-                            onPress={nextStep}
-                            className={cn(step === 0 ? "w-full" : "flex-1")}
-                            disabled={isSubmitting}>
+                        <Button variant={step === TOTAL_STEPS ? "success" : "primary"} onPress={nextStep} className={cn(step === 0 ? "w-full" : "flex-1")} disabled={isSubmitting}>
                             {step === 0 ? "Get Started" : step === TOTAL_STEPS ? (isSubmitting ? "Saving..." : "Go to Dashboard") : "Continue"}
                         </Button>
                     </Div>

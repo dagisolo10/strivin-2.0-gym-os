@@ -108,13 +108,7 @@ async function updateStreak(db: DB, activePlan: WorkoutPlanWithDays) {
         const [lastPerfectSession] = await tx
             .select()
             .from(schema.workoutSessions)
-            .where(
-                and(
-                    eq(schema.workoutSessions.userId, activePlan.userId),
-                    eq(schema.workoutSessions.date, prevSessionDate),
-                    eq(schema.workoutSessions.perfectDay, true),
-                ),
-            )
+            .where(and(eq(schema.workoutSessions.userId, activePlan.userId), eq(schema.workoutSessions.date, prevSessionDate), eq(schema.workoutSessions.perfectDay, true)))
             .limit(1);
 
         if (!lastPerfectSession) {
@@ -193,15 +187,12 @@ export function computePerfectDay(activePlan: WorkoutPlanWithDays | null, todays
     return true;
 }
 
-export async function resetLocalUserData() {
+export async function resetLocalUserData(localUserId: string) {
     const database = getDb();
 
     await enqueueWrite(() =>
         database.transaction(async (tx) => {
-            const [user] = await tx.select().from(schema.users).limit(1);
-            if (!user) return;
-
-            const userId = user.localId;
+            const userId = localUserId;
             const plans = await tx.select().from(schema.workoutPlans).where(eq(schema.workoutPlans.userId, userId));
             const planIds = plans.map((plan) => plan.localId);
 

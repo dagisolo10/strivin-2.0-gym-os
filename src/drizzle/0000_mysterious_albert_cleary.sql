@@ -51,15 +51,18 @@ CREATE INDEX `exercises_day_id_idx` ON `exercises` (`workout_day_id`);--> statem
 CREATE TABLE `users` (
 	`local_id` text PRIMARY KEY NOT NULL,
 	`server_id` text,
+	`supabase_id` text,
 	`name` text NOT NULL,
 	`profile` text,
 	`current_streak` integer DEFAULT 0,
 	`longest_streak` integer DEFAULT 0,
+	`last_streak_awarded_at` text,
 	`created_at` text DEFAULT (CURRENT_TIMESTAMP),
 	`sync_status` text DEFAULT 'pending' NOT NULL,
 	`updated_at` text DEFAULT (CURRENT_TIMESTAMP)
 );
 --> statement-breakpoint
+CREATE UNIQUE INDEX `users_supabase_id_unique` ON `users` (`supabase_id`);--> statement-breakpoint
 CREATE TABLE `workout_days` (
 	`local_id` text PRIMARY KEY NOT NULL,
 	`server_id` text,

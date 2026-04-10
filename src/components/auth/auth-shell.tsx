@@ -1,6 +1,7 @@
 import { Image } from "react-native";
 import { icons } from "@/constants/icons";
 import { Link, LinkProps } from "expo-router";
+import { AntDesign } from "@expo/vector-icons";
 import { Button } from "@/components/ui/interactive";
 import { Badge, Card, Div, H1, P, Screen } from "@/components/ui/display";
 
@@ -51,4 +52,23 @@ export function FieldError({ message }: { message?: string }) {
     if (!message) return null;
 
     return <P className="text-destructive text-sm leading-5">{message}</P>;
+}
+
+export function Divider() {
+    return (
+        <Div className="flex-row items-center gap-3">
+            <Div className="bg-border h-px flex-1" />
+            <P className="text-muted-foreground text-sm font-medium">or continue with</P>
+            <Div className="bg-border h-px flex-1" />
+        </Div>
+    );
+}
+
+export function SocialButton({ onPress }: { onPress: () => void }) {
+    return (
+        <Button component variant={"outline"} className="gap-2">
+            <AntDesign name="google" size={18} color="cornflowerblue" />
+            <P className="text-foreground font-semibold">Google</P>
+        </Button>
+    );
 }

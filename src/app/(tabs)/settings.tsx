@@ -1,27 +1,34 @@
 import { useRouter } from "expo-router";
+import { supabase } from "@/lib/supabase";
+import { usePlan } from "@/hooks/use-plan";
+import { useUser } from "@/hooks/use-user";
 import { Alert, Image } from "react-native";
 import { useEffect, useState } from "react";
 import { useAppData } from "@/hooks/use-app-data";
 import { resetLocalUserData } from "@/server/workout";
+import { useAuthStore } from "@/store/use-auth-store";
 import { usePlanStore } from "@/store/use-plan-store";
 import { Button, NavLink } from "@/components/ui/interactive";
 import { PlanCarousel } from "@/components/plans/plan-carousel";
+import { useOnboardingStore } from "@/store/use-onboarding-store";
 import { Card, Div, H1, H3, P, Row, Screen } from "@/components/ui/display";
 
 export default function Settings() {
     const router = useRouter();
     const [isResetting, setIsResetting] = useState(false);
-    const { user, enrichedPlans: plans } = useAppData({ includePlanDetails: true, includeWorkoutHistory: true });
-    const selectedPlanId = usePlanStore((state) => state.selectedPlanId);
+    const { user, enrichedPlans } = useAppData({ includePlanDetails: true, includeWorkoutHistory: true });
+    const { activePlan } = usePlan();
+    const { session } = useUser();
+    const localUserId = useAuthStore((state) => state.localUserId);
+
     const setSelectedPlanId = usePlanStore((state) => state.setSelectedPlanId);
     const syncSelectedPlan = usePlanStore((state) => state.syncSelectedPlan);
+    const resetOnboarding = useOnboardingStore((state) => state.reset);
 
-    const planIds = (plans ?? []).map((plan) => plan.localId).join("|");
+    const planIds = (enrichedPlans ?? []).map((plan) => plan.localId).join("|");
     useEffect(() => {
-        if (plans) syncSelectedPlan(plans.map((plan) => plan.localId));
-    }, [planIds, plans, syncSelectedPlan]);
-
-    const activePlan = (plans ?? []).find((plan) => plan.localId === selectedPlanId) ?? plans?.[0];
+        if (enrichedPlans) syncSelectedPlan(enrichedPlans.map((plan) => plan.localId));
+    }, [planIds, enrichedPlans, syncSelectedPlan]);
 
     return (
         <Screen className="gap-6 pb-36">
@@ -32,14 +39,12 @@ export default function Settings() {
 
             <Card className="gap-3">
                 <P className="text-muted-foreground text-sm uppercase">Dev Profile</P>
-                <Row className="items-end">
+                <Row className="items-start">
                     <Row className="items-end gap-4">
-                        <Image
-                            className="size-14 rounded-full"
-                            source={user?.profile ? { uri: user.profile } : require("../../../assets/images/profile.jpg")}
-                        />
+                        <Image className="size-14 rounded-full" source={user?.profile ? { uri: user.profile } : require("../../../assets/images/profile.jpg")} />
                         <Div className="justify-start">
                             <H3>{user?.name}</H3>
+                            <P className="text-muted-foreground">{session?.user.email}</P>
                         </Div>
                     </Row>
                     <P className="text-muted-foreground text-sm">
@@ -49,7 +54,7 @@ export default function Settings() {
             </Card>
 
             <PlanCarousel
-                plans={plans as any}
+                plans={enrichedPlans as any}
                 selectedPlanId={activePlan?.localId ?? null}
                 onSelect={setSelectedPlanId}
                 title="Plan library"
@@ -59,7 +64,7 @@ export default function Settings() {
             <Card className="gap-2">
                 <P className="text-muted-foreground text-sm uppercase">Plan</P>
                 <H3>{activePlan?.split ?? "No plan yet"}</H3>
-                <P className="text-muted-foreground text-sm">{(plans ?? []).length} saved plans on this device.</P>
+                <P className="text-muted-foreground text-sm">{(enrichedPlans ?? []).length} saved plans on this device.</P>
 
                 <NavLink href={{ pathname: "/plan-editor", params: { mode: "new" } }} className="mt-2" variant={"secondary"} size={"lg"}>
                     Create new plan
@@ -73,7 +78,7 @@ export default function Settings() {
                 <P className="text-muted-foreground text-sm uppercase">Danger zone</P>
                 <P className="text-muted-foreground">Resetting local data removes your saved plan, sessions, and streak history from this device.</P>
                 <Button
-                    variant="outline"
+                    variant="destructive"
                     className="mt-2"
                     disabled={isResetting}
                     onPress={() =>
@@ -86,7 +91,7 @@ export default function Settings() {
                                     if (isResetting) return;
                                     setIsResetting(true);
                                     try {
-                                        await resetLocalUserData();
+                                        await resetLocalUserData(localUserId!);
                                         router.replace("/onboarding");
                                     } finally {
                                         setIsResetting(false);
@@ -97,14 +102,16 @@ export default function Settings() {
                     }>
                     {isResetting ? "Resetting..." : "Reset local data"}
                 </Button>
-                <Button
-                    variant={"destructive"}
-                    onPress={async () => {
-                        router.replace("/(tabs)/home");
-                    }}>
-                    Reload demo data
-                </Button>
             </Card>
+
+            <Button
+                onPress={async () => {
+                    await supabase.auth.signOut();
+                    resetOnboarding();
+                    router.replace("/(auth)/sign-in");
+                }}>
+                Logout
+            </Button>
         </Screen>
     );
 }

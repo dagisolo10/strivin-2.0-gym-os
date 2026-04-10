@@ -9,6 +9,7 @@ export const users = sqliteTable("users", {
         .primaryKey()
         .$defaultFn(() => randomUUID()),
     serverId: text("server_id"),
+    supabaseId: text("supabase_id").unique(),
 
     name: text("name").notNull(),
     profile: text("profile"),

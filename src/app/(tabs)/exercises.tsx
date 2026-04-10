@@ -1,9 +1,10 @@
+import { FlatList } from "react-native";
 import { DAY_ORDER } from "@/constants/data";
 import { useAppData } from "@/hooks/use-app-data";
 import { useEffect, useMemo, useState } from "react";
 import type { GroupedExercise } from "@/types/types";
+import { useAuthStore } from "@/store/use-auth-store";
 import { usePlanStore } from "@/store/use-plan-store";
-import { FlatList } from "react-native";
 import { PlanCarousel } from "@/components/plans/plan-carousel";
 import { ErrorScreen, LoadingScreen } from "@/components/ui/screen-ui";
 import ExerciseDetailsCard from "@/components/exercise/exercise-details-card";
@@ -25,10 +26,11 @@ const createExerciseSignature = (exercise: GroupedExercise["exercise"]) =>
 export default function AllExercisesScreen() {
     const [expandedExerciseId, setExpandedExerciseId] = useState<string | null>(null);
 
-    const { isLoading, updatedAt, user, enrichedPlans } = useAppData({
+    const { isLoading, updatedAt, enrichedPlans } = useAppData({
         includePlanDetails: true,
         includeWorkoutHistory: false,
     });
+    const localUserId = useAuthStore((state) => state.localUserId);
 
     const setSelectedPlanId = usePlanStore((state) => state.setSelectedPlanId);
     const syncSelectedPlan = usePlanStore((state) => state.syncSelectedPlan);
@@ -87,7 +89,7 @@ export default function AllExercisesScreen() {
 
     if (isLoading) return <LoadingScreen />;
 
-    if (!user || !activePlan) return <ErrorScreen message="Finish your setup to unlock your exercises." href="/onboarding" button="Open onboarding" />;
+    if (!localUserId || !activePlan) return <ErrorScreen message="Finish your setup to unlock your exercises." href="/onboarding" button="Open onboarding" />;
 
     return (
         <Screen nonScrollable>
@@ -106,9 +108,7 @@ export default function AllExercisesScreen() {
                                 <H3 className="flex-1 text-white">{activePlan.split}</H3>
                                 <Badge variant="glass">{groupedExercises.length} exercises</Badge>
                             </Row>
-                            <P className="text-sm text-white/80">
-                                Browse the exercise library for the active plan, expand any card for full details, and manage it without leaving this tab.
-                            </P>
+                            <P className="text-sm text-white/80">Browse the exercise library for the active plan, expand any card for full details, and manage it without leaving this tab.</P>
                         </Card>
 
                         <PlanCarousel
@@ -130,7 +130,7 @@ export default function AllExercisesScreen() {
                     <ExerciseDetailsCard
                         groupedExercise={item}
                         availableDays={availableDays}
-                        userId={user.localId}
+                        userId={localUserId}
                         planId={activePlan.localId}
                         isExpanded={expandedExerciseId === item.localId}
                         onToggle={(expanded) => setExpandedExerciseId(expanded ? item.localId : null)}

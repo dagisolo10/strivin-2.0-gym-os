@@ -1,6 +1,9 @@
+import { useUser } from "./use-user";
+
 import * as schema from "@/db/sqlite";
 import { eq, inArray } from "drizzle-orm";
 import { useDrizzle } from "@/context/db-provider";
+import { useAuthStore } from "@/store/use-auth-store";
 import { useLiveQuery } from "drizzle-orm/expo-sqlite";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { WorkoutSessionWithLogs, ExerciseWithLogs, WorkoutPlanWithDays } from "@/types/types";
@@ -16,9 +19,9 @@ export function useAppData(options: UseAppDataOptions = {}) {
     const { includePlanDetails = false, includeWorkoutHistory = false } = options;
     const db = useDrizzle();
 
-    const { data: userData, updatedAt: userUpdatedAt } = useLiveQuery(db.query.users.findFirst());
-    const user = userData ?? null;
-    const userId = user?.localId ?? EMPTY_ID;
+    const { user, loading: userLoading, updatedAt: userUpdatedAt } = useUser();
+    const localUserId = useAuthStore((state) => state.localUserId);
+    const userId = localUserId ?? EMPTY_ID;
 
     const { data: plans = [], updatedAt: plansUpdatedAt } = useLiveQuery(
         db.query.workoutPlans.findMany({
@@ -126,7 +129,7 @@ export function useAppData(options: UseAppDataOptions = {}) {
         }));
     }, [exercisesById, logsBySessionId, sessions]);
 
-    const toTimestamp = (value?: number | Date) => (value instanceof Date ? value.getTime() : (value ?? 0));
+    const toTimestamp = (value?: number | Date | null) => (value instanceof Date ? value.getTime() : (value ?? 0));
     const updatedAt = Math.max(
         toTimestamp(userUpdatedAt),
         toTimestamp(plansUpdatedAt),
@@ -156,11 +159,13 @@ export function useAppData(options: UseAppDataOptions = {}) {
 
     const plansLoadedForCurrentUser = userId === EMPTY_ID || loadedPlansUserId === userId;
 
-    const isLoading = includeWorkoutHistory
-        ? !sessionsUpdatedAt || !logsUpdatedAt || (!userUpdatedAt && user === null)
-        : includePlanDetails
-          ? !workoutDaysUpdatedAt || !exercisesUpdatedAt || !plansLoadedForCurrentUser || !userUpdatedAt
-          : !plansLoadedForCurrentUser || !userUpdatedAt;
+    const isLoading =
+        userLoading ||
+        (includeWorkoutHistory
+            ? !sessionsUpdatedAt || !logsUpdatedAt || (!userUpdatedAt && user === null)
+            : includePlanDetails
+              ? !workoutDaysUpdatedAt || !exercisesUpdatedAt || !plansLoadedForCurrentUser || !userUpdatedAt
+              : !plansLoadedForCurrentUser || !userUpdatedAt);
 
     return {
         user,

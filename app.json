@@ -1,11 +1,11 @@
 {
     "expo": {
-        "name": "Strivin",
-        "slug": "Strivin",
+        "name": "Strivin-gym",
+        "slug": "Strivin-gym",
         "version": "1.0.0",
         "orientation": "portrait",
         "icon": "./assets/images/icon.png",
-        "scheme": "strivin",
+        "scheme": "strivin-gym",
         "userInterfaceStyle": "automatic",
         "ios": {
             "supportsTablet": true
@@ -18,7 +18,7 @@
                 "monochromeImage": "./assets/images/android-icon-monochrome.png"
             },
             "predictiveBackGestureEnabled": false,
-            "package": "com.dagisolo.strivin"
+            "package": "com.dagisolo.strivin_gym"
         },
         "web": {
             "output": "single",
