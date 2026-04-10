@@ -17,13 +17,16 @@ export function useUser() {
     const resetOnboarding = useOnboardingStore((state) => state.reset);
     const previousSupabaseUserIdRef = useRef<string | null>(null);
 
-    // Auth listener
     useEffect(() => {
+        let cancelled = false;
+        let authEventReceived = false;
         const fetchInitialSession = async () => {
             const {
                 data: { session },
             } = await supabase.auth.getSession();
-            setAuth(session);
+            if (!cancelled && !authEventReceived) {
+                setAuth(session);
+            }
         };
 
         fetchInitialSession();
@@ -31,24 +34,27 @@ export function useUser() {
         const {
             data: { subscription },
         } = supabase.auth.onAuthStateChange((_event, session) => {
+            authEventReceived = true;
             setAuth(session);
         });
 
-        return () => subscription.unsubscribe();
+        return () => {
+            cancelled = true;
+            subscription.unsubscribe();
+        };
     }, [setAuth]);
 
-    // Fetch user when supabaseUserId changes
     useEffect(() => {
         let cancelled = false;
         const fetchUser = async () => {
             try {
                 setLoading(true);
                 setError(null);
+                   setUser(null);
+                   setLocalUserId(null);
 
                 if (!supabaseUserId) {
                     if (!cancelled) {
-                        setUser(null);
-                        setLocalUserId(null);
                         setUpdatedAt(new Date());
                     }
                     return;

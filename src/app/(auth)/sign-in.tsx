@@ -51,9 +51,9 @@ export default function SignIn() {
 
                 <Field label="Password">
                     <Div>
-                        <Input placeholder="********" value={password} onChangeText={setPassword} secureTextEntry={passwordVisible} />
+                        <Input placeholder="********" value={password} onChangeText={setPassword} secureTextEntry={!passwordVisible} />
                         <Button onPress={() => setPasswordVisible((visible) => !visible)} className="absolute top-1/2 right-0 -translate-y-1/2 opacity-50" variant="ghost" size={"icon"}>
-                            {passwordVisible ? <Eye size={16} /> : <EyeOff size={16} />}
+                            {passwordVisible ? <EyeOff size={16} /> : <Eye size={16} />}
                         </Button>
                     </Div>
                 </Field>

@@ -83,18 +83,18 @@ export default function SignUp() {
 
                         <Field label="Password">
                             <Div className="relative">
-                                <Input placeholder="********" value={password} onChangeText={setPassword} secureTextEntry={passwordVisible} />
+                                <Input placeholder="********" value={password} onChangeText={setPassword} secureTextEntry={!passwordVisible} />
                                 <Button onPress={() => setPasswordVisible((visible) => !visible)} className="absolute top-1/2 right-0 -translate-y-1/2 opacity-50" variant="ghost" size={"icon"}>
-                                    {passwordVisible ? <Eye size={16} /> : <EyeOff size={16} />}
+                                    {passwordVisible ? <EyeOff size={16} /> : <Eye size={16} />}
                                 </Button>
                             </Div>
                         </Field>
 
                         <Field label="Confirm Password">
                             <Div className="relative">
-                                <Input placeholder="Confirm password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry={confirmPasswordVisible} />
+                                <Input placeholder="Confirm password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry={!confirmPasswordVisible} />
                                 <Button onPress={() => setConfirmPasswordVisible((visible) => !visible)} className="absolute top-1/2 right-0 -translate-y-1/2 opacity-50" variant="ghost" size={"icon"}>
-                                    {confirmPasswordVisible ? <Eye size={16} /> : <EyeOff size={16} />}
+                                    {confirmPasswordVisible ? <EyeOff size={16} /> : <Eye size={16} />}
                                 </Button>
                             </Div>
                         </Field>
