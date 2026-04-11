@@ -73,7 +73,7 @@ const badgeVariants = cva("inline-flex flex-row items-center justify-center roun
     variants: {
         variant: {
             primary: "bg-primary border-transparent",
-            success: "bg-success border-transparent",
+            success: "bg-success/10 border-transparent",
             secondary: "bg-accent border-transparent",
             destructive: "bg-destructive border-transparent",
             outline: "border-border bg-transparent",
@@ -88,7 +88,7 @@ const badgeVariants = cva("inline-flex flex-row items-center justify-center roun
 
 const badgeTextVariants = {
     primary: "text-white",
-    success: "text-white",
+    success: "text-success",
     secondary: "text-white",
     destructive: "text-white",
     outline: "text-foreground",

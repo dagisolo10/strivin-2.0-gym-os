@@ -51,3 +51,37 @@ export interface UserWithPlanOnly extends User {
     plans: WorkoutPlan[];
     sessions: WorkoutSession[];
 }
+
+export interface ProgressionConfig {
+    minimumSessions?: number;
+    successRate?: number;
+    maxHistorySessions?: number;
+    repsIncrement?: number;
+    weightIncrement?: number;
+    setsIncrement?: number;
+    distanceIncrement?: number;
+    durationIncrement?: number;
+}
+
+export interface ProgressionSuggestion {
+    suggestedReps?: number;
+    suggestedWeight?: number;
+    suggestedSets?: number;
+    suggestedDistance?: number;
+    suggestedDuration?: number;
+    confidence: ProgressionConfidence;
+    reason: string;
+}
+
+export interface SessionProgress {
+    sessionId: string;
+    date: string;
+    completedSets: number;
+    targetSets: number;
+    averageReps: number | null;
+    averageWeight: number | null;
+    averageDistance: number | null;
+    averageDuration: number | null;
+    success: boolean;
+    reason: string;
+}

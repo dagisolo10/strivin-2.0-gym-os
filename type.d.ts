@@ -22,6 +22,8 @@ declare global {
     type Unit = "kg" | "lb" | "km" | "mi" | "sec" | "mins" | "meters" | "reps";
     type WorkoutSplit = "Push Pull Leg" | "Upper Lower" | "Full Body" | "Endurance" | (string & {});
 
+    type ProgressionConfidence = "low" | "medium" | "high";
+
     interface ExerciseWithLogs extends Exercise {
         logs: ExerciseLog[];
     }

@@ -17,16 +17,7 @@ import { ErrorToast } from "@/components/add/add-screen-components";
 import { useForm, FieldErrors, FieldValues } from "react-hook-form";
 import { ErrorScreen, LoadingScreen } from "@/components/ui/screen-ui";
 import { Badge, Card, Div, H1, H2, P, Row, Screen } from "@/components/ui/display";
-import {
-    ExerciseNameField,
-    TypeField,
-    VariantField,
-    DayAssignmentField,
-    SetsAndRepsFields,
-    DurationField,
-    UnitAndValueField,
-    CoreWeightToggleField,
-} from "@/components/exercise/exercise-form-fields";
+import { ExerciseNameField, TypeField, VariantField, DayAssignmentField, SetsAndRepsFields, DurationField, UnitAndValueField, CoreWeightToggleField } from "@/components/exercise/exercise-form-fields";
 
 type AddExerciseValues = z.input<typeof exerciseSchema>;
 
@@ -124,8 +115,8 @@ export default function AddExerciseScreen() {
 
             toast.promise(request, {
                 loading: "Adding Exercise...",
-                success: "Exercise added",
-                error: "Failed to add exercise",
+                success: "Success: Exercise added",
+                error: "Error: Failed to add exercise",
             });
 
             await request;
@@ -177,11 +168,7 @@ export default function AddExerciseScreen() {
             <Card className="gap-5">
                 <Row className="items-start gap-3">
                     <Div className="flex-1">
-                        <SectionTitle
-                            eyebrow="Identity"
-                            title="Describe the movement"
-                            note="Start with the name, category, and placement so the routine stays easy to scan later."
-                        />
+                        <SectionTitle eyebrow="Identity" title="Describe the movement" note="Start with the name, category, and placement so the routine stays easy to scan later." />
                     </Div>
                     <StatusChip label="Type" value={selectedType || "Choose"} muted={!selectedType} />
                 </Row>
@@ -253,9 +240,7 @@ export default function AddExerciseScreen() {
 
             <Card className="items-start gap-3 border-0 bg-[#FFF1D6]">
                 <Badge variant="outline">Coach note</Badge>
-                <P className="text-muted-foreground">
-                    Use specific names like &quot;Incline Dumbbell Press&quot; or &quot;Treadmill Tempo Run&quot; so logging later feels immediate and precise.
-                </P>
+                <P className="text-muted-foreground">Use specific names like &quot;Incline Dumbbell Press&quot; or &quot;Treadmill Tempo Run&quot; so logging later feels immediate and precise.</P>
             </Card>
 
             <Button onPress={handleSubmit(registerEx, onInvalid)} disabled={isSubmitting}>

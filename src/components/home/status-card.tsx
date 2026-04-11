@@ -2,8 +2,8 @@ import { WorkoutPlanWithDays } from "@/types/types";
 import { Badge, Card, Div, H1, P, Row } from "@/components/ui/display";
 
 interface StatusCardProp {
-        currentStreak: number;
-        longestStreak: number;
+    currentStreak: number;
+    longestStreak: number;
     plan: WorkoutPlanWithDays;
     progress: number;
     completedSets: number;

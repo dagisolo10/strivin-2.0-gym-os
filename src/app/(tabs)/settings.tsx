@@ -1,34 +1,119 @@
+import { z } from "zod";
 import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
+import { Edit } from "lucide-react-native";
+import { updateUser } from "@/server/user";
 import { usePlan } from "@/hooks/use-plan";
 import { useUser } from "@/hooks/use-user";
 import { Alert, Image } from "react-native";
+import { toast } from "react-native-sonner";
 import { useEffect, useState } from "react";
+import * as ImagePicker from "expo-image-picker";
 import { useAppData } from "@/hooks/use-app-data";
 import { resetLocalUserData } from "@/server/workout";
 import { useAuthStore } from "@/store/use-auth-store";
+import { useForm, Controller } from "react-hook-form";
 import { usePlanStore } from "@/store/use-plan-store";
-import { Button, NavLink } from "@/components/ui/interactive";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { PlanCarousel } from "@/components/plans/plan-carousel";
 import { useOnboardingStore } from "@/store/use-onboarding-store";
-import { Card, Div, H1, H3, P, Row, Screen } from "@/components/ui/display";
+import { Button, Input, NavLink } from "@/components/ui/interactive";
+import { LoadingScreen, ErrorMessage } from "@/components/ui/screen-ui";
+import { Card, Div, H1, H3, P, Row, Screen, Field } from "@/components/ui/display";
+
+const updateUserSchema = z.object({
+    name: z.string().min(1, "Name is required"),
+});
+
+type UpdateUserForm = z.infer<typeof updateUserSchema>;
 
 export default function Settings() {
     const router = useRouter();
     const [isResetting, setIsResetting] = useState(false);
+    const [isUpdating, setIsUpdating] = useState(false);
     const { user, enrichedPlans } = useAppData({ includePlanDetails: true, includeWorkoutHistory: true });
     const { activePlan } = usePlan();
-    const { session } = useUser();
+    const { session, loading } = useUser();
     const localUserId = useAuthStore((state) => state.localUserId);
 
     const setSelectedPlanId = usePlanStore((state) => state.setSelectedPlanId);
     const syncSelectedPlan = usePlanStore((state) => state.syncSelectedPlan);
     const resetOnboarding = useOnboardingStore((state) => state.reset);
 
+    const form = useForm<UpdateUserForm>({
+        resolver: zodResolver(updateUserSchema),
+        defaultValues: {
+            name: user?.name || "",
+        },
+    });
+
+    useEffect(() => {
+        if (user) {
+            form.reset({ name: user.name || "" });
+        }
+    }, [form, user]);
+
+    const onSubmit = async (data: UpdateUserForm) => {
+        if (isUpdating) return;
+
+        if (!localUserId) {
+            toast.error("User not found", { description: "Please sign in again." });
+            return;
+        }
+
+        setIsUpdating(true);
+
+        try {
+            const updateData: { name?: string } = {};
+            if (data.name !== user?.name) updateData.name = data.name;
+
+            if (Object.keys(updateData).length === 0) {
+                toast.success("No changes to update");
+                return;
+            }
+
+            await updateUser(localUserId, updateData);
+            toast.success("Profile updated successfully", { description: "Your changes have been saved." });
+        } catch (error: any) {
+            console.error(error);
+            toast.error("Failed to update profile", { description: error.message || "Please try again." });
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    const pickImage = async () => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== "granted") {
+            toast.error("Permission denied", { description: "We need access to your photos to update your profile picture." });
+            return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: "images",
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+        });
+
+        if (!result.canceled) {
+            const uri = result.assets[0].uri;
+            try {
+                await updateUser(localUserId!, { profile: uri });
+                toast.success("Profile picture updated", { description: "Your new profile picture has been saved." });
+            } catch (error: any) {
+                console.error(error);
+                toast.error("Failed to update profile picture", { description: error.message || "Please try again." });
+            }
+        }
+    };
+
     const planIds = (enrichedPlans ?? []).map((plan) => plan.localId).join("|");
     useEffect(() => {
         if (enrichedPlans) syncSelectedPlan(enrichedPlans.map((plan) => plan.localId));
     }, [planIds, enrichedPlans, syncSelectedPlan]);
+
+    if (loading) return <LoadingScreen />;
 
     return (
         <Screen className="gap-6 pb-36">
@@ -41,16 +126,34 @@ export default function Settings() {
                 <P className="text-muted-foreground text-sm uppercase">Dev Profile</P>
                 <Row className="items-start">
                     <Row className="items-end gap-4">
-                        <Image className="size-14 rounded-full" source={user?.profile ? { uri: user.profile } : require("../../../assets/images/profile.jpg")} />
+                        <Div className="relative">
+                            <Image className="size-14 rounded-full" source={user?.profile ? { uri: user.profile } : require("../../../assets/images/no-user.jpg")} />
+                            <Button className="absolute -right-1 -bottom-1 size-6 rounded-full p-0" variant="secondary" onPress={pickImage}>
+                                <Edit size={12} color="white" />
+                            </Button>
+                        </Div>
                         <Div className="justify-start">
                             <H3>{user?.name}</H3>
                             <P className="text-muted-foreground">{session?.user.email}</P>
                         </Div>
                     </Row>
-                    <P className="text-muted-foreground text-sm">
-                        Current streak: {user?.currentStreak ?? 0} day{(user?.currentStreak ?? 0) > 1 ? "s" : ""}
-                    </P>
                 </Row>
+
+                <Div className="gap-4">
+                    <Controller
+                        control={form.control}
+                        name="name"
+                        render={({ field: { onChange, onBlur, value }, fieldState: { error } }) => (
+                            <Field label="Name">
+                                <Input placeholder="Enter your name" value={value} onBlur={onBlur} onChangeText={onChange} />
+                                <ErrorMessage message={error?.message} />
+                            </Field>
+                        )}
+                    />
+                    <Button variant="primary" disabled={isUpdating} onPress={form.handleSubmit(onSubmit)}>
+                        {isUpdating ? "Updating..." : "Update Profile"}
+                    </Button>
+                </Div>
             </Card>
 
             <PlanCarousel
@@ -108,6 +211,7 @@ export default function Settings() {
                 onPress={async () => {
                     await supabase.auth.signOut();
                     resetOnboarding();
+                    useAuthStore.getState().clearAuth();
                     router.replace("/(auth)/sign-in");
                 }}>
                 Logout

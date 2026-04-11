@@ -20,16 +20,7 @@ interface ExerciseDetailsCardProps {
     onExerciseDeleted?: () => void;
 }
 
-export default function ExerciseDetailsCard({
-    groupedExercise,
-    availableDays,
-    userId,
-    planId,
-    isExpanded: isExpandedProp,
-    onToggle,
-    onExerciseUpdated,
-    onExerciseDeleted,
-}: ExerciseDetailsCardProps) {
+export default function ExerciseDetailsCard({ groupedExercise, availableDays, userId, planId, isExpanded: isExpandedProp, onToggle, onExerciseUpdated, onExerciseDeleted }: ExerciseDetailsCardProps) {
     const [isExpandedInternal, setIsExpandedInternal] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -63,13 +54,13 @@ export default function ExerciseDetailsCard({
                         const result = await deleteExerciseGroup({ exerciseIds, userId });
 
                         if (result.success) {
-                            toast.success("Exercise deleted successfully");
+                            toast.success("Success: Exercise deleted successfully", { description: "The exercise has been removed from your plan." });
                             onExerciseDeleted?.();
                         } else {
-                            toast.error(result.error || "Failed to delete exercise");
+                            toast.error("Error: Failed to delete exercise", { description: result.error || "Please try again." });
                         }
                     } catch {
-                        toast.error("An unexpected error occurred while deleting the exercise");
+                        toast.error("Error: An unexpected error occurred while deleting the exercise", { description: "Please check your connection and try again." });
                     } finally {
                         setIsDeleting(false);
                     }
@@ -155,11 +146,7 @@ export default function ExerciseDetailsCard({
 
                     {isCardio ? (
                         <Row className="items-start gap-3">
-                            <StatCard
-                                label="Distance"
-                                value={`${exercise.distance ?? 0} ${exercise.unit ?? "km"}`}
-                                icon={<MapPinned size={16} color="#666" />}
-                            />
+                            <StatCard label="Distance" value={`${exercise.distance ?? 0} ${exercise.unit ?? "km"}`} icon={<MapPinned size={16} color="#666" />} />
                             <StatCard label="Duration" value={`${exercise.duration ?? 0} min`} icon={<Clock3 size={16} color="#666" />} />
                         </Row>
                     ) : (

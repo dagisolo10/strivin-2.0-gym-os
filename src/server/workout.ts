@@ -4,13 +4,233 @@ import { randomUUID } from "expo-crypto";
 import { and, eq, inArray } from "drizzle-orm";
 import { enqueueWrite } from "@/db/write-queue";
 import { getDateKey, getWeekdayName, sortWorkoutDays } from "@/lib/helper-functions";
-import { ExerciseLog, WorkoutPlanWithDays, WorkoutSessionWithExerciseLogs } from "@/types/types";
+import { ExerciseLog, ExerciseWithLogs, ProgressionConfig, ProgressionSuggestion, SessionProgress, WorkoutPlanWithDays, WorkoutSessionWithExerciseLogs } from "@/types/types";
+
+const DEFAULT_PROGRESSION_CONFIG: ProgressionConfig = {
+    minimumSessions: 4,
+    successRate: 0.8,
+    maxHistorySessions: 6,
+    repsIncrement: 1,
+    weightIncrement: 2.5,
+    setsIncrement: 1,
+    distanceIncrement: 0.25,
+    durationIncrement: 30,
+};
+
+const isCardioExercise = (exercise: ExerciseWithLogs) => exercise.type === "Cardio";
+
+const roundToIncrement = (value: number, increment: number) => Math.round(value / increment) * increment;
+
+const average = (values: (number | null | undefined)[]) => {
+    const valid = values.filter((value): value is number => typeof value === "number" && !Number.isNaN(value));
+    return valid.length ? valid.reduce((sum, value) => sum + value, 0) / valid.length : null;
+};
 
 export function calculateSuggestedLoad(targetWeight?: number | null, averageWeight?: number | null, averageReps?: number | null, targetReps?: number | null) {
     if (!targetWeight || !targetReps || !averageReps) return null;
     if (averageReps >= targetReps) return Math.round(targetWeight * 1.03);
     if (averageReps < targetReps * 0.7) return Math.max(1, Math.round(targetWeight * 0.97));
     return Math.round(targetWeight);
+}
+
+export function groupExerciseLogsBySession(sessions: WorkoutSessionWithExerciseLogs[], exercise: ExerciseWithLogs): SessionProgress[] {
+    return sessions
+        .map((session) => {
+            const logs = session.logs.filter((log) => log.exerciseId === exercise.localId);
+            const completedSets = logs.length;
+            const targetSets = exercise.sets ?? 1;
+            const averageReps = average(logs.map((log) => log.reps));
+            const averageWeight = average(logs.map((log) => log.weight));
+            const averageDistance = average(logs.map((log) => log.distance));
+            const averageDuration = average(logs.map((log) => log.duration));
+
+            return {
+                sessionId: session.localId,
+                date: session.date,
+                completedSets,
+                targetSets,
+                averageReps,
+                averageWeight,
+                averageDistance,
+                averageDuration,
+                success: false,
+                reason: "No evaluation performed yet.",
+            };
+        })
+        .filter((session) => session.completedSets > 0)
+        .sort((left, right) => right.date.localeCompare(left.date));
+}
+
+function evaluateSessionSuccess(exercise: ExerciseWithLogs, session: SessionProgress): SessionProgress {
+    const targetSets = exercise.sets ?? 1;
+    const completedSets = session.completedSets;
+    const averageReps = session.averageReps ?? 0;
+    const averageWeight = session.averageWeight ?? 0;
+    const averageDistance = session.averageDistance ?? 0;
+    const averageDuration = session.averageDuration ?? 0;
+
+    const meetsSets = completedSets >= targetSets;
+    const meetsReps = exercise.reps == null ? true : averageReps >= exercise.reps;
+    const meetsWeight = exercise.weight == null ? true : averageWeight >= exercise.weight;
+    const meetsDistance = exercise.distance == null ? true : averageDistance >= exercise.distance;
+    const meetsDuration = exercise.duration == null ? true : averageDuration >= exercise.duration;
+
+    let success = false;
+    let reason = "";
+
+    if (isCardioExercise(exercise)) {
+        success = meetsSets && meetsDistance && meetsDuration;
+        if (!meetsSets) reason = "Did not complete the scheduled sets.";
+        else if (exercise.distance != null && !meetsDistance) reason = "Distance target was not met.";
+        else if (exercise.duration != null && !meetsDuration) reason = "Duration target was not met.";
+        else reason = "Session met the cardio targets.";
+    } else {
+        success = meetsSets && meetsReps && meetsWeight;
+        if (!meetsSets) reason = "Did not complete the scheduled sets.";
+        else if (exercise.reps != null && !meetsReps) reason = "Rep target was not met.";
+        else if (exercise.weight != null && !meetsWeight) reason = "Weight target was not met.";
+        else reason = "Session met the strength targets.";
+    }
+
+    return {
+        ...session,
+        targetSets,
+        success,
+        reason,
+    };
+}
+
+function calculateConsistencyScore(sessions: SessionProgress[], config: ProgressionConfig) {
+    const history = sessions.slice(0, config.maxHistorySessions ?? DEFAULT_PROGRESSION_CONFIG.maxHistorySessions!);
+    const count = history.length;
+    const successCount = history.filter((session) => session.success).length;
+    const score = count > 0 ? successCount / count : 0;
+
+    return {
+        count,
+        successCount,
+        score,
+        requiredSessions: config.minimumSessions ?? DEFAULT_PROGRESSION_CONFIG.minimumSessions!,
+    };
+}
+
+export function calculateSuggestedProgression(exercise: ExerciseWithLogs, sessionHistory: WorkoutSessionWithExerciseLogs[], config: ProgressionConfig = {}): ProgressionSuggestion {
+    const mergedConfig = { ...DEFAULT_PROGRESSION_CONFIG, ...config };
+    const sessionProgress = groupExerciseLogsBySession(sessionHistory, exercise).map((session) => evaluateSessionSuccess(exercise, session));
+
+    if (sessionProgress.length === 0) {
+        return {
+            confidence: "low",
+            reason: "Not enough completed sessions for this exercise yet.",
+        };
+    }
+
+    const consistency = calculateConsistencyScore(sessionProgress, mergedConfig);
+
+    if (consistency.count < mergedConfig.minimumSessions!) {
+        if (consistency.score >= mergedConfig.successRate!) {
+            return {
+                confidence: "medium",
+                reason: `Strong early performance over ${consistency.count} session(s), but not enough data for progression yet. Hold steady.`,
+            };
+        }
+
+        return {
+            confidence: "low",
+            reason: "Not enough consistent history yet. Hold steady until more sessions are logged.",
+        };
+    }
+
+    if (consistency.score < 0.5) {
+        const suggestion: ProgressionSuggestion = {
+            confidence: "low",
+            reason: "Recent performance is inconsistent. Maintain or slightly reduce load until form stabilizes.",
+        };
+
+        if (isCardioExercise(exercise)) {
+            if (exercise.distance != null) {
+                suggestion.suggestedDistance = Math.max(0, (exercise.distance ?? 0) - mergedConfig.distanceIncrement!);
+            } else if (exercise.duration != null) {
+                suggestion.suggestedDuration = Math.max(0, (exercise.duration ?? 0) - mergedConfig.durationIncrement!);
+            }
+        } else if (exercise.weight != null) {
+            suggestion.suggestedWeight = Math.max(0, (exercise.weight ?? 0) - mergedConfig.weightIncrement!);
+        }
+
+        return suggestion;
+    }
+
+    if (consistency.score < mergedConfig.successRate!) {
+        return {
+            confidence: "medium",
+            reason: "Performance has been mixed. Hold steady and focus on consistent completion before increasing load.",
+        };
+    }
+
+    const successfulSessions = sessionProgress.filter((session) => session.success);
+    const averageSuccessfulReps = average(successfulSessions.map((session) => session.averageReps));
+    const averageSuccessfulWeight = average(successfulSessions.map((session) => session.averageWeight));
+    const averageSuccessfulDistance = average(successfulSessions.map((session) => session.averageDistance));
+    const averageSuccessfulDuration = average(successfulSessions.map((session) => session.averageDuration));
+
+    const suggestion: ProgressionSuggestion = {
+        confidence: "high",
+        reason: "Recent sessions show consistent progress. Increase one variable at a time.",
+    };
+
+    if (isCardioExercise(exercise)) {
+        if (exercise.distance != null && averageSuccessfulDistance != null && averageSuccessfulDistance >= exercise.distance) {
+            suggestion.suggestedDistance = roundToIncrement(exercise.distance + mergedConfig.distanceIncrement!, mergedConfig.distanceIncrement!);
+            return suggestion;
+        }
+
+        if (exercise.duration != null && averageSuccessfulDuration != null && averageSuccessfulDuration >= exercise.duration) {
+            suggestion.suggestedDuration = Math.max(1, exercise.duration + mergedConfig.durationIncrement!);
+            return suggestion;
+        }
+
+        return {
+            confidence: "medium",
+            reason: "Cardio performance is solid, but there is no single clear progression metric yet. Hold steady.",
+        };
+    }
+
+    const targetReps = exercise.reps ?? null;
+    const targetWeight = exercise.weight ?? null;
+    const targetSets = exercise.sets ?? null;
+
+    const shouldIncreaseReps = targetReps != null && averageSuccessfulReps != null && averageSuccessfulReps >= targetReps;
+    const shouldIncreaseWeight = targetWeight != null && averageSuccessfulWeight != null && averageSuccessfulWeight >= targetWeight;
+    const shouldIncreaseSets = targetSets != null && successfulSessions.every((session) => session.completedSets >= targetSets);
+
+    if (shouldIncreaseReps) {
+        suggestion.suggestedReps = targetReps + mergedConfig.repsIncrement!;
+        return suggestion;
+    }
+
+    if (shouldIncreaseWeight) {
+        const weightSuggestion = roundToIncrement(targetWeight + mergedConfig.weightIncrement!, mergedConfig.weightIncrement!);
+        suggestion.suggestedWeight = weightSuggestion;
+        return suggestion;
+    }
+
+    if (shouldIncreaseSets) {
+        suggestion.suggestedSets = targetSets + mergedConfig.setsIncrement!;
+        return suggestion;
+    }
+
+    return {
+        confidence: "medium",
+        reason: "Sessions are consistently solid, but none of the progression rules are satisfied yet. Hold steady.",
+    };
+}
+
+interface LogResult {
+    perfectDay: boolean;
+    streakUpdated: boolean;
+    currentStreak?: number;
+    longestStreak?: number;
+    isNewLongestStreak?: boolean;
 }
 
 interface LogData {
@@ -24,13 +244,13 @@ interface LogData {
     activePlan: WorkoutPlanWithDays;
 }
 
-export async function logExerciseSet(data: LogData) {
+export async function logExerciseSet(data: LogData): Promise<LogResult> {
     const db = getDb();
     const dateKey = getDateKey();
     const { userId, exerciseId, reps, weight, duration, distance } = data;
 
     try {
-        await enqueueWrite(() =>
+        return await enqueueWrite(() =>
             db.transaction(async (tx) => {
                 let session = await tx.query.workoutSessions.findFirst({
                     where: (fields, { and, eq }) => and(eq(fields.userId, userId), eq(fields.date, dateKey)),
@@ -71,7 +291,21 @@ export async function logExerciseSet(data: LogData) {
 
                 await tx.update(schema.workoutSessions).set({ perfectDay }).where(eq(schema.workoutSessions.localId, sessionId));
 
-                if (perfectDay) await updateStreak(db, data.activePlan);
+                if (perfectDay) {
+                    const streakResult = await updateStreak(db, data.activePlan);
+                    return {
+                        perfectDay,
+                        streakUpdated: Boolean(streakResult),
+                        currentStreak: streakResult?.currentStreak,
+                        longestStreak: streakResult?.longestStreak,
+                        isNewLongestStreak: streakResult?.isNewLongestStreak ?? false,
+                    };
+                }
+
+                return {
+                    perfectDay,
+                    streakUpdated: false,
+                };
             }),
         );
     } catch (error) {
@@ -81,14 +315,14 @@ export async function logExerciseSet(data: LogData) {
     }
 }
 
-async function updateStreak(db: DB, activePlan: WorkoutPlanWithDays) {
-    await db.transaction(async (tx) => {
+async function updateStreak(db: DB, activePlan: WorkoutPlanWithDays): Promise<{ currentStreak: number; longestStreak: number; isNewLongestStreak: boolean } | null> {
+    return await db.transaction(async (tx) => {
         const todayKey = getDateKey();
         const planDays = sortWorkoutDays(activePlan.days.map((day) => day.dayName));
 
         const prevWeekDay = getPreviousWorkoutDay(planDays);
 
-        if (!prevWeekDay) return;
+        if (!prevWeekDay) return null;
 
         const prevSessionDate = getPreviousDateForWeekday(prevWeekDay);
 
@@ -102,8 +336,10 @@ async function updateStreak(db: DB, activePlan: WorkoutPlanWithDays) {
             .where(eq(schema.users.localId, activePlan.userId))
             .limit(1);
 
-        if (!user) return;
-        if (user.lastStreakAwardedAt === todayKey) return;
+        if (!user) return null;
+        if (user.lastStreakAwardedAt === todayKey) return null;
+
+        const previousLongest = user.longestStreak ?? 0;
 
         const [lastPerfectSession] = await tx
             .select()
@@ -112,28 +348,40 @@ async function updateStreak(db: DB, activePlan: WorkoutPlanWithDays) {
             .limit(1);
 
         if (!lastPerfectSession) {
+            const updatedLongest = Math.max(1, previousLongest);
             await tx
                 .update(schema.users)
                 .set({
                     currentStreak: 1,
-                    longestStreak: Math.max(1, user.longestStreak ?? 0),
+                    longestStreak: updatedLongest,
                     lastStreakAwardedAt: todayKey,
                 })
                 .where(eq(schema.users.localId, activePlan.userId));
 
-            return;
+            return {
+                currentStreak: 1,
+                longestStreak: updatedLongest,
+                isNewLongestStreak: 1 > previousLongest,
+            };
         }
 
         const newStreak = (user.currentStreak ?? 0) + 1;
+        const newLongest = Math.max(newStreak, previousLongest);
 
         await tx
             .update(schema.users)
             .set({
                 currentStreak: newStreak,
-                longestStreak: Math.max(newStreak, user.longestStreak ?? 0),
+                longestStreak: newLongest,
                 lastStreakAwardedAt: todayKey,
             })
             .where(eq(schema.users.localId, activePlan.userId));
+
+        return {
+            currentStreak: newStreak,
+            longestStreak: newLongest,
+            isNewLongestStreak: newStreak > previousLongest,
+        };
     });
 }
 
