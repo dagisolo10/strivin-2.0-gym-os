@@ -1,17 +1,19 @@
 import { eq } from "drizzle-orm";
-import { getDb } from "@/db/client";
 import { users } from "@/db/sqlite";
 import { User } from "@/types/types";
 import { supabase } from "@/lib/supabase";
+import { useDrizzle } from "@/context/db-provider";
 import { useState, useEffect, useRef } from "react";
 import { useAuthStore } from "@/store/use-auth-store";
+import { useLiveQuery } from "drizzle-orm/expo-sqlite";
 import { useOnboardingStore } from "@/store/use-onboarding-store";
 
 export function useUser() {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<unknown | null>(null);
+    const [error] = useState<unknown | null>(null);
     const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
+    const [authInitialized, setAuthInitialized] = useState(false);
 
     const { supabaseUserId, session, setAuth, setLocalUserId } = useAuthStore();
     const resetOnboarding = useOnboardingStore((state) => state.reset);
@@ -26,6 +28,7 @@ export function useUser() {
             } = await supabase.auth.getSession();
             if (!cancelled && !authEventReceived) {
                 setAuth(session);
+                setAuthInitialized(true);
             }
         };
 
@@ -36,6 +39,7 @@ export function useUser() {
         } = supabase.auth.onAuthStateChange((_event, session) => {
             authEventReceived = true;
             setAuth(session);
+            setAuthInitialized(true);
         });
 
         return () => {
@@ -44,48 +48,35 @@ export function useUser() {
         };
     }, [setAuth]);
 
+    const db = useDrizzle();
+    const { data: liveUser } = useLiveQuery(
+        db.query.users.findFirst({
+            where: eq(users.supabaseId, supabaseUserId ?? "__no_match__"),
+        }),
+        [supabaseUserId],
+    );
+
     useEffect(() => {
-        let cancelled = false;
-        const fetchUser = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-                   setUser(null);
-                   setLocalUserId(null);
+        if (!authInitialized) return;
 
-                if (!supabaseUserId) {
-                    if (!cancelled) {
-                        setUpdatedAt(new Date());
-                    }
-                    return;
-                }
+        if (!supabaseUserId) {
+            setUser(null);
+            setLocalUserId(null);
+            setLoading(false);
+            return;
+        }
 
-                const db = getDb();
-                const userData = await db.select().from(users).where(eq(users.supabaseId, supabaseUserId)).limit(1);
+        if (liveUser === undefined) {
+            setLoading(true);
+            return;
+        }
 
-                if (cancelled) return;
+        setUser(liveUser ?? null);
+        setLocalUserId(liveUser?.localId ?? null);
+        setUpdatedAt(new Date());
+        setLoading(false);
+    }, [authInitialized, liveUser, supabaseUserId, setLocalUserId]);
 
-                const foundUser = userData[0] || null;
-                setUser(foundUser);
-                setLocalUserId(foundUser?.localId ?? null);
-                setUpdatedAt(new Date());
-            } catch (err) {
-                if (cancelled) return;
-                console.error("Error fetching user:", err);
-                setError(err);
-                setUpdatedAt(new Date());
-            } finally {
-                if (!cancelled) setLoading(false);
-            }
-        };
-
-        fetchUser();
-        return () => {
-            cancelled = true;
-        };
-    }, [supabaseUserId, setLocalUserId]);
-
-    // Reset onboarding on user switch
     useEffect(() => {
         if (previousSupabaseUserIdRef.current !== null && previousSupabaseUserIdRef.current !== supabaseUserId) {
             resetOnboarding();
@@ -93,5 +84,5 @@ export function useUser() {
         previousSupabaseUserIdRef.current = supabaseUserId;
     }, [supabaseUserId, resetOnboarding]);
 
-    return { user, supabaseUserId, loading, error, updatedAt, session };
+    return { user, supabaseUserId, loading, error, updatedAt, session, authInitialized };
 }

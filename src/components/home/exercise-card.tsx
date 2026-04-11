@@ -9,8 +9,8 @@ import { useWorkoutLogs } from "@/hooks/use-workout-logs";
 import { Button, Input } from "@/components/ui/interactive";
 import { ChevronDown, ChevronUp } from "lucide-react-native";
 import { ExerciseWithLogs, ExerciseLog } from "@/types/types";
+import { Card, Div, Field, H3, P, Row } from "@/components/ui/display";
 import { calculateSuggestedLoad, logExerciseSet } from "@/server/workout";
-import { Badge, Card, Div, Field, H3, P, Row } from "@/components/ui/display";
 
 interface CardProp {
     logs: ExerciseLog[];
@@ -120,13 +120,11 @@ function ExerciseCard({ userId, exercise, logs, onPress, expandedId, selectedDay
             ? `${Math.round(((averageDistance ?? 0) as number) * 10) / 10}${exercise.unit ?? "km"}`
             : `${Math.round(((averageWeight ?? exercise.weight ?? 0) as number) * 10) / 10}${exercise.unit ?? "kg"}`,
 
-        pacing: isCardio
-            ? `${Math.round((averageDuration ?? 0) as number)} min`
-            : `${Math.round((averageReps ?? exercise.reps ?? 0) as number)} reps`,
+        pacing: isCardio ? `${Math.round((averageDuration ?? 0) as number)} min` : `${Math.round((averageReps ?? exercise.reps ?? 0) as number)} reps`,
     };
 
     return (
-        <Card className="p-0">
+        <Card className={cn(!isExpanded && completed ? "border-success/20 shadow-none" : "", "p-0")}>
             <MainButton
                 onPress={onPress}
                 exercise={exercise}
@@ -144,37 +142,23 @@ function ExerciseCard({ userId, exercise, logs, onPress, expandedId, selectedDay
                     <MetricChips bestAverage={displayMetrics.bestAverage} pacing={displayMetrics.pacing} suggestedLoad={suggestedLoad} exercise={exercise} />
                     <InfoCards completedSets={completedSets} targetSets={targetSets} suggestedLoad={suggestedLoad} exercise={exercise} />
 
-                    <Cardio
-                        type={exercise.type}
-                        exercise={exercise}
-                        weight={weight}
-                        setWeight={setWeight}
-                        reps={reps}
-                        setReps={setReps}
-                        isReadOnly={isReadOnly}
-                    />
-                    <Weight
-                        type={exercise.type}
-                        exercise={exercise}
-                        weight={weight}
-                        setWeight={setWeight}
-                        reps={reps}
-                        setReps={setReps}
-                        isReadOnly={isReadOnly}
-                    />
+                    <Cardio type={exercise.type} exercise={exercise} weight={weight} setWeight={setWeight} reps={reps} setReps={setReps} isReadOnly={isReadOnly} />
+                    <Weight type={exercise.type} exercise={exercise} weight={weight} setWeight={setWeight} reps={reps} setReps={setReps} isReadOnly={isReadOnly} />
 
-                    <Button
-                        variant={buttonVariant}
-                        className={cn(isReadOnly && "opacity-50")}
-                        textClassName={isReadOnly ? "text-muted-foreground" : "text-background"}
-                        disabled={isLogging || isReadOnly}
-                        onPress={handleLogPress}>
-                        {buttonLabel}
-                    </Button>
+                    <Row className="gap-4">
+                        <Button variant="destructive" className="flex-1" disabled={isDeleting} onPress={handleDeletePress}>
+                            {isDeleting ? "Deleting..." : "Delete Exercise"}
+                        </Button>
 
-                    <Button variant="destructive" className="mt-2" disabled={isDeleting} onPress={handleDeletePress}>
-                        {isDeleting ? "Deleting..." : "Delete Exercise"}
-                    </Button>
+                        <Button
+                            variant={buttonVariant}
+                            className={cn(isReadOnly && "opacity-50", "flex-1")}
+                            textClassName={isReadOnly ? "text-muted-foreground" : "text-background"}
+                            disabled={isLogging || isReadOnly}
+                            onPress={handleLogPress}>
+                            {buttonLabel}
+                        </Button>
+                    </Row>
                 </Div>
             )}
         </Card>
@@ -211,7 +195,7 @@ interface MainButtonProp {
 
 function MainButton({ onPress, exercise, completed, completedSets, targetSets, targetSummary, isExpanded }: MainButtonProp) {
     return (
-        <Button variant="ghost" className="h-auto p-4" onPress={onPress} component>
+        <Button className={cn(!isExpanded && completed ? "bg-success/10" : "bg-transparent", "h-auto p-4")} onPress={onPress} component>
             <Row className="flex-1 gap-4">
                 <Div className="bg-muted size-12 items-center justify-center rounded-2xl">
                     <P className="text-primary font-bold">{exercise.type.substring(0, 4)}</P>
@@ -221,7 +205,6 @@ function MainButton({ onPress, exercise, completed, completedSets, targetSets, t
                     <Div className="flex-1">
                         <Row className="items-center gap-2">
                             <P className="text-lg font-bold">{exercise.name}</P>
-                            <Badge variant={completed ? "success" : "outline"}>{completed ? "Completed" : `${completedSets}/${targetSets}`}</Badge>
                         </Row>
                         <P className="text-muted-foreground mt-1 text-sm">{targetSummary}</P>
                     </Div>
@@ -251,20 +234,12 @@ function MetricChips({ bestAverage, pacing, suggestedLoad, exercise }: Pick<SubC
         <Row className="gap-4">
             <MetricChip label="Best avg" value={bestAverage} />
             <MetricChip label="Rep pace" value={pacing} />
-            <MetricChip
-                label="Next cue"
-                value={suggestedLoad ? `${suggestedLoad}${exercise.unit ?? "kg"}` : exercise.type === "Cardio" ? "Hold pace" : "Stable"}
-            />
+            <MetricChip label="Next cue" value={suggestedLoad ? `${suggestedLoad}${exercise.unit ?? "kg"}` : exercise.type === "Cardio" ? "Hold pace" : "Stable"} />
         </Row>
     );
 }
 
-function InfoCards({
-    completedSets,
-    targetSets,
-    suggestedLoad,
-    exercise,
-}: Pick<SubComponentProps, "completedSets" | "targetSets" | "suggestedLoad" | "exercise">) {
+function InfoCards({ completedSets, targetSets, suggestedLoad, exercise }: Pick<SubComponentProps, "completedSets" | "targetSets" | "suggestedLoad" | "exercise">) {
     return (
         <Row className="items-start gap-3">
             <Div className="bg-card flex-1 rounded-3xl px-4 py-4">
@@ -277,61 +252,29 @@ function InfoCards({
 
             <Div className="flex-1 rounded-3xl bg-[#FFF3DE] px-4 py-4">
                 <P className="text-muted-foreground text-[10px] uppercase">Next session cue</P>
-                <H3 className="text-primary mt-1">
-                    {suggestedLoad ? `${suggestedLoad}${exercise.unit ?? "kg"}` : exercise.type === "Cardio" ? "Keep pace" : "Stay steady"}
-                </H3>
+                <H3 className="text-primary mt-1">{suggestedLoad ? `${suggestedLoad}${exercise.unit ?? "kg"}` : exercise.type === "Cardio" ? "Keep pace" : "Stay steady"}</H3>
                 <P className="text-muted-foreground mt-1 text-sm">Suggested from your current logged trend.</P>
             </Div>
         </Row>
     );
 }
 
-function Cardio({
-    exercise,
-    weight,
-    setWeight,
-    reps,
-    setReps,
-    isReadOnly,
-    type,
-}: Pick<SubComponentProps, "exercise" | "weight" | "setWeight" | "reps" | "setReps" | "isReadOnly" | "type">) {
+function Cardio({ exercise, weight, setWeight, reps, setReps, isReadOnly, type }: Pick<SubComponentProps, "exercise" | "weight" | "setWeight" | "reps" | "setReps" | "isReadOnly" | "type">) {
     if (type !== "Cardio") return null;
 
     return (
         <Row className="gap-3">
             <Field label={`Distance (${exercise.unit ?? "km"})`} className="flex-1">
-                <Input
-                    className="h-14 rounded-2xl"
-                    keyboardType="decimal-pad"
-                    value={weight}
-                    onChangeText={setWeight}
-                    placeholder={exercise.distance?.toString() ?? "5"}
-                    editable={!isReadOnly}
-                />
+                <Input className="h-14 rounded-2xl" keyboardType="decimal-pad" value={weight} onChangeText={setWeight} placeholder={exercise.distance?.toString() ?? "5"} editable={!isReadOnly} />
             </Field>
             <Field label="Duration (min)" className="flex-1">
-                <Input
-                    className="h-14 rounded-2xl"
-                    keyboardType="number-pad"
-                    value={reps}
-                    onChangeText={setReps}
-                    placeholder={exercise.duration?.toString() ?? "30"}
-                    editable={!isReadOnly}
-                />
+                <Input className="h-14 rounded-2xl" keyboardType="number-pad" value={reps} onChangeText={setReps} placeholder={exercise.duration?.toString() ?? "30"} editable={!isReadOnly} />
             </Field>
         </Row>
     );
 }
 
-function Weight({
-    exercise,
-    weight,
-    setWeight,
-    reps,
-    setReps,
-    isReadOnly,
-    type,
-}: Pick<SubComponentProps, "exercise" | "weight" | "setWeight" | "reps" | "setReps" | "isReadOnly" | "type">) {
+function Weight({ exercise, weight, setWeight, reps, setReps, isReadOnly, type }: Pick<SubComponentProps, "exercise" | "weight" | "setWeight" | "reps" | "setReps" | "isReadOnly" | "type">) {
     if (type === "Cardio") return null;
 
     return (

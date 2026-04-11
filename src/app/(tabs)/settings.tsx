@@ -108,6 +108,7 @@ export default function Settings() {
                 onPress={async () => {
                     await supabase.auth.signOut();
                     resetOnboarding();
+                    useAuthStore.getState().clearAuth();
                     router.replace("/(auth)/sign-in");
                 }}>
                 Logout

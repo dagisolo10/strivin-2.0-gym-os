@@ -14,7 +14,7 @@ import DayCarousel from "@/components/home/day-carousel";
 import ExerciseCard from "@/components/home/exercise-card";
 import { PlanCarousel } from "@/components/plans/plan-carousel";
 import { LoadingScreen, ErrorScreen } from "@/components/ui/screen-ui";
-import { Badge, Div, H3, Row, Screen, Separator } from "@/components/ui/display";
+import { Div, H3, P, Row, Screen, Separator } from "@/components/ui/display";
 
 export default function HomeScreen() {
     const [selectedDayName, setSelectedDayName] = useState<Weekday>(getWeekdayName());
@@ -42,9 +42,9 @@ export default function HomeScreen() {
         if (enrichedPlans.length) syncSelectedPlan(enrichedPlans.map((plan) => plan.localId));
     }, [enrichedPlans, syncSelectedPlan]);
 
-    if (isLoading) return <LoadingScreen />;
+    if (isLoading || !user || !localUserId) return <LoadingScreen />;
 
-    if (!localUserId || !user || !activePlan) return <ErrorScreen message="Finish your setup to unlock your dashboard." href="/onboarding" button="Open onboarding" />;
+    if (!activePlan) return <ErrorScreen message="Finish your setup to unlock your dashboard." href="/onboarding" button="Open onboarding" />;
 
     return (
         <Screen nonScrollable>
@@ -76,7 +76,9 @@ export default function HomeScreen() {
 
                         <Row className="mb-2">
                             <H3>{tables.workoutDay?.dayName === getWeekdayName() ? "Today's Routine" : `${selectedDayName}'s Routine`}</H3>
-                            <Badge variant={isPerfectDay ? "success" : "outline"}>{!tables.todaysSession ? "Not Started" : isPerfectDay ? "Perfect Day" : "In Progress"}</Badge>
+                            <P className="border-border bg-success/10 text-success rounded-full border px-3 py-px">
+                                {!tables.todaysSession ? "Not Started" : isPerfectDay ? "Perfect Day" : "In Progress"}
+                            </P>
                         </Row>
                     </Div>
                 }

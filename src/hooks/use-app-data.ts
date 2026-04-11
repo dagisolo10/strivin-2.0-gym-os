@@ -1,11 +1,11 @@
 import { useUser } from "./use-user";
 
+import { useMemo } from "react";
 import * as schema from "@/db/sqlite";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { useDrizzle } from "@/context/db-provider";
 import { useAuthStore } from "@/store/use-auth-store";
 import { useLiveQuery } from "drizzle-orm/expo-sqlite";
-import { useEffect, useMemo, useRef, useState } from "react";
 import { WorkoutSessionWithLogs, ExerciseWithLogs, WorkoutPlanWithDays } from "@/types/types";
 
 const EMPTY_ID = "__no_match__";
@@ -19,7 +19,7 @@ export function useAppData(options: UseAppDataOptions = {}) {
     const { includePlanDetails = false, includeWorkoutHistory = false } = options;
     const db = useDrizzle();
 
-    const { user, loading: userLoading, updatedAt: userUpdatedAt } = useUser();
+    const { user, loading: userLoading, updatedAt: userUpdatedAt, authInitialized } = useUser();
     const localUserId = useAuthStore((state) => state.localUserId);
     const userId = localUserId ?? EMPTY_ID;
 
@@ -30,9 +30,6 @@ export function useAppData(options: UseAppDataOptions = {}) {
         [userId],
     );
 
-    const [loadedPlansUserId, setLoadedPlansUserId] = useState<string | null>(null);
-    const previousPlansUpdatedAtRef = useRef<number | null>(null);
-
     const activePlans = useMemo(() => plans.filter((plan) => !plan.isDeleted), [plans]);
     const planIds = useMemo(() => activePlans.map((plan) => plan.localId), [activePlans]);
     const shouldLoadPlanDetails = includePlanDetails && planIds.length > 0;
@@ -40,16 +37,16 @@ export function useAppData(options: UseAppDataOptions = {}) {
 
     const { data: workoutDays = [], updatedAt: workoutDaysUpdatedAt } = useLiveQuery(
         db.query.workoutDays.findMany({
-            where: inArray(schema.workoutDays.planId, safePlanIds),
+            where: and(eq(schema.workoutDays.userId, userId), inArray(schema.workoutDays.planId, safePlanIds)),
         }),
-        [includePlanDetails, safePlanIds.join("|")],
+        [includePlanDetails, safePlanIds.join("|"), userId],
     );
 
     const { data: exercises = [], updatedAt: exercisesUpdatedAt } = useLiveQuery(
         db.query.exercises.findMany({
-            where: inArray(schema.exercises.planId, safePlanIds),
+            where: and(eq(schema.exercises.userId, userId), inArray(schema.exercises.planId, safePlanIds)),
         }),
-        [includePlanDetails, safePlanIds.join("|")],
+        [includePlanDetails, safePlanIds.join("|"), userId],
     );
 
     const activeWorkoutDays = useMemo(() => workoutDays.filter((day) => !day.isDeleted), [workoutDays]);
@@ -61,14 +58,14 @@ export function useAppData(options: UseAppDataOptions = {}) {
         db.query.workoutSessions.findMany({
             where: eq(schema.workoutSessions.userId, shouldLoadWorkoutHistory ? userId : EMPTY_ID),
         }),
-        [includeWorkoutHistory, userId],
+        [includeWorkoutHistory, userId, shouldLoadWorkoutHistory],
     );
 
     const { data: logs = [], updatedAt: logsUpdatedAt } = useLiveQuery(
         db.query.exerciseLogs.findMany({
             where: eq(schema.exerciseLogs.userId, shouldLoadWorkoutHistory ? userId : EMPTY_ID),
         }),
-        [includeWorkoutHistory, userId],
+        [includeWorkoutHistory, userId, shouldLoadWorkoutHistory],
     );
 
     const logsByExerciseId = useMemo(() => {
@@ -139,32 +136,11 @@ export function useAppData(options: UseAppDataOptions = {}) {
         toTimestamp(logsUpdatedAt),
     );
 
-    useEffect(() => {
-        if (userId === EMPTY_ID) {
-            setLoadedPlansUserId(null);
-            return;
-        }
+    const needsPlans = userId !== EMPTY_ID && !plansUpdatedAt;
+    const needsPlanDetails = includePlanDetails && userId !== EMPTY_ID && (!workoutDaysUpdatedAt || !exercisesUpdatedAt);
+    const needsWorkoutHistory = includeWorkoutHistory && userId !== EMPTY_ID && (!sessionsUpdatedAt || !logsUpdatedAt);
 
-        const currentPlansUpdatedAt = plansUpdatedAt ? toTimestamp(plansUpdatedAt) : null;
-        const previousPlansUpdatedAt = previousPlansUpdatedAtRef.current;
-
-        if (currentPlansUpdatedAt !== previousPlansUpdatedAt) {
-            previousPlansUpdatedAtRef.current = currentPlansUpdatedAt;
-
-            if (currentPlansUpdatedAt !== null) {
-                setLoadedPlansUserId(userId);
-            }
-        }
-    }, [plansUpdatedAt, userId]);
-
-    const plansLoadedForCurrentUser = userId === EMPTY_ID || loadedPlansUserId === userId;
-
-    const needsUser = !userUpdatedAt && user === null;
-    const needsPlans = !plansLoadedForCurrentUser || !userUpdatedAt;
-    const needsPlanDetails = includePlanDetails && (!workoutDaysUpdatedAt || !exercisesUpdatedAt);
-    const needsWorkoutHistory = includeWorkoutHistory && (!sessionsUpdatedAt || !logsUpdatedAt);
-
-    const isLoading = userLoading || needsUser || needsPlans || needsPlanDetails || needsWorkoutHistory;
+    const isLoading = !authInitialized || userLoading || needsPlans || needsPlanDetails || needsWorkoutHistory;
 
     return {
         user,
