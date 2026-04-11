@@ -251,7 +251,7 @@ function MetricChips({ bestAverage, pacing, suggestedLoad, exercise }: Pick<SubC
         <Row className="gap-4">
             <MetricChip label="Best avg" value={bestAverage} />
             <MetricChip label="Rep pace" value={pacing} />
-            <MetricChip label="Next cue" value={suggestedLoad ? `${suggestedLoad}${exercise.unit ?? "kg"}` : exercise.type === "Cardio" ? "Hold pace" : "Stable"} />
+            <MetricChip label="Next cue" value={suggestedLoad !== null ? `${suggestedLoad}${exercise.unit ?? "kg"}` : exercise.type === "Cardio" ? "Hold pace" : "Stable"} />
         </Row>
     );
 }
@@ -269,7 +269,7 @@ function InfoCards({ completedSets, targetSets, suggestedLoad, exercise }: Pick<
 
             <Div className="flex-1 rounded-3xl bg-[#FFF3DE] px-4 py-4">
                 <P className="text-muted-foreground text-[10px] uppercase">Next session cue</P>
-                <H3 className="text-primary mt-1">{suggestedLoad ? `${suggestedLoad}${exercise.unit ?? "kg"}` : exercise.type === "Cardio" ? "Keep pace" : "Stay steady"}</H3>
+                <H3 className="text-primary mt-1">{suggestedLoad !== null ? `${suggestedLoad}${exercise.unit ?? "kg"}` : exercise.type === "Cardio" ? "Keep pace" : "Stay steady"}</H3>
                 <P className="text-muted-foreground mt-1 text-sm">Suggested from your current logged trend.</P>
             </Div>
         </Row>

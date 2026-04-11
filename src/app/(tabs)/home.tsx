@@ -45,7 +45,9 @@ export default function HomeScreen() {
         if (enrichedPlans.length) syncSelectedPlan(enrichedPlans.map((plan) => plan.localId));
     }, [enrichedPlans, syncSelectedPlan]);
 
-    if (isLoading || !user || !localUserId) return <LoadingScreen />;
+    if (isLoading) return <LoadingScreen />;
+
+    if (!user || !localUserId) return <ErrorScreen message="Session not available. Please sign in again." href="/(auth)/sign-in" button="Go to sign in" />;
 
     if (!activePlan) return <ErrorScreen message="Finish your setup to unlock your dashboard." href="/onboarding" button="Open onboarding" />;
 

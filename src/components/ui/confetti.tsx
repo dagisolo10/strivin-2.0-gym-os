@@ -1,5 +1,5 @@
-import { useEffect, useMemo } from "react";
-import { Animated, Dimensions, Easing, StyleSheet, View } from "react-native";
+import { useEffect, useMemo, useRef } from "react";
+import { Animated, Easing, StyleSheet, useWindowDimensions, View } from "react-native";
 
 type ConfettiEvent = "perfectDay" | "newStreak" | "newLongestStreak";
 
@@ -48,8 +48,13 @@ interface ConfettiOverlayProps {
 }
 
 export default function ConfettiOverlay({ event, onFinished }: ConfettiOverlayProps) {
-    const { width, height } = Dimensions.get("window");
+    const { width, height } = useWindowDimensions();
     const pieces = useMemo(() => (event ? createPieces(event, width) : []), [event, width]);
+    const onFinishedRef = useRef(onFinished);
+
+    useEffect(() => {
+        onFinishedRef.current = onFinished;
+    }, [onFinished]);
 
     useEffect(() => {
         if (!event || pieces.length === 0) return;
@@ -65,13 +70,13 @@ export default function ConfettiOverlay({ event, onFinished }: ConfettiOverlayPr
         );
 
         Animated.stagger(25, animations).start();
-        const timeout = setTimeout(onFinished, 1800);
+        const timeout = setTimeout(() => onFinishedRef.current(), 1800);
 
         return () => {
             clearTimeout(timeout);
             pieces.forEach((piece) => piece.animatedValue.stopAnimation());
         };
-    }, [event, onFinished, pieces]);
+    }, [event, pieces]);
 
     if (!event) return null;
 

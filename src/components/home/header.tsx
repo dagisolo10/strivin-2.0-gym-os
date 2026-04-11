@@ -11,10 +11,10 @@ export default function Header({ user }: { user: UserWithPlanOnly }) {
         <Row className="items-center">
             <Div className="items-start gap-2">
                 <Row className="gap-3">
-                    <Image className="border-border size-14 rounded-full border" source={user.profile ? { uri: user.profile } : require("../../../assets/images/profile.jpg")} />
+                    <Image className="border-border size-14 rounded-full border" source={user.profile && user.profile.trim() ? { uri: user.profile } : require("../../../assets/images/images.png")} />
                     <Div>
+                        <H2 className="m-0">{user.name}</H2>
                         <P className="text-muted-foreground text-sm">Good {greeting}</P>
-                        <H2>{user.name}</H2>
                     </Div>
                 </Row>
             </Div>

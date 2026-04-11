@@ -55,8 +55,6 @@ function RootLayout() {
         </GestureHandlerRootView>
     );
 
-    console.log("-------------------------------");
-
     return posthog ? <PostHogProvider client={posthog}>{layoutContent}</PostHogProvider> : layoutContent;
 }
 

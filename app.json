@@ -51,7 +51,12 @@
                     ]
                 }
             ],
-            "expo-image-picker",
+            [
+                "expo-image-picker",
+                {
+                    "photosPermission": "Strivin needs access to your photos to set your profile picture."
+                }
+            ],
             "expo-sqlite",
             "expo-build-properties",
             "expo-web-browser",

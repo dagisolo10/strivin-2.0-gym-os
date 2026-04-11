@@ -49,15 +49,20 @@ export default function Settings() {
 
     useEffect(() => {
         if (user) {
-            form.reset({
-                name: user.name || "",
-            });
+            form.reset({ name: user.name || "" });
         }
-    }, [user, form]);
+    }, [form, user]);
 
     const onSubmit = async (data: UpdateUserForm) => {
         if (isUpdating) return;
+
+        if (!localUserId) {
+            toast.error("User not found", { description: "Please sign in again." });
+            return;
+        }
+
         setIsUpdating(true);
+
         try {
             const updateData: { name?: string } = {};
             if (data.name !== user?.name) updateData.name = data.name;
@@ -67,7 +72,7 @@ export default function Settings() {
                 return;
             }
 
-            await updateUser(localUserId!, updateData);
+            await updateUser(localUserId, updateData);
             toast.success("Profile updated successfully", { description: "Your changes have been saved." });
         } catch (error: any) {
             console.error(error);
@@ -85,7 +90,7 @@ export default function Settings() {
         }
 
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            mediaTypes: "images",
             allowsEditing: true,
             aspect: [1, 1],
             quality: 0.8,
@@ -122,7 +127,7 @@ export default function Settings() {
                 <Row className="items-start">
                     <Row className="items-end gap-4">
                         <Div className="relative">
-                            <Image className="size-14 rounded-full" source={user?.profile ? { uri: user.profile } : require("../../../assets/images/profile.jpg")} />
+                            <Image className="size-14 rounded-full" source={user?.profile ? { uri: user.profile } : require("../../../assets/images/no-user.jpg")} />
                             <Button className="absolute -right-1 -bottom-1 size-6 rounded-full p-0" variant="secondary" onPress={pickImage}>
                                 <Edit size={12} color="white" />
                             </Button>

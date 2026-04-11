@@ -11,7 +11,6 @@ import { useOnboardingStore } from "@/store/use-onboarding-store";
 export function useUser() {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
-    const [error] = useState<unknown | null>(null);
     const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
     const [authInitialized, setAuthInitialized] = useState(false);
 
@@ -84,5 +83,5 @@ export function useUser() {
         previousSupabaseUserIdRef.current = supabaseUserId;
     }, [supabaseUserId, resetOnboarding]);
 
-    return { user, supabaseUserId, loading, error, updatedAt, session, authInitialized };
+    return { user, supabaseUserId, loading, updatedAt, session, authInitialized };
 }
