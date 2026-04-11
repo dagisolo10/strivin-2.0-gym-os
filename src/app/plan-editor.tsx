@@ -113,8 +113,8 @@ export default function PlanEditorScreen() {
             const isCreating = createNew || isCreateMode;
             toast.promise(request, {
                 loading: isCreating ? "Creating plan..." : "Saving plan...",
-                success: isCreating ? "New plan created" : "Plan updated",
-                error: isCreating ? "Could not create plan" : "Could not update plan",
+                success: isCreating ? "Success: New plan created" : "Success: Plan updated",
+                error: isCreating ? "Error: Could not create plan" : "Error: Could not update plan",
             });
 
             const result = await request;
@@ -321,11 +321,11 @@ export default function PlanEditorScreen() {
                                     setIsDeleting(true);
                                     const result = await deleteWorkoutPlan(localUserId, selectedPlan.localId);
                                     if (!result.success) {
-                                        toast.error("Could not delete plan");
+                                        toast.error("Error: Could not delete plan", { description: "Please try again." });
                                         setIsDeleting(false);
                                         return;
                                     }
-                                    toast.success("Plan deleted");
+                                    toast.success("Success: Plan deleted", { description: "The plan has been removed." });
                                     setIsDeleting(false);
                                     router.back();
                                 },

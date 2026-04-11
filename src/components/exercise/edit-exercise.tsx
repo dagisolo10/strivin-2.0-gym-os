@@ -1,22 +1,14 @@
-import { z } from "zod";
-import { useEffect, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "react-native-sonner";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { exerciseSchema } from "@/db/zod";
-import { updateExerciseGroup } from "@/server/exercise";
 import { Button } from "../ui/interactive";
 import { Card, Div, H3, Row } from "../ui/display";
-import {
-    CoreWeightToggleField,
-    DayAssignmentField,
-    DurationField,
-    ExerciseNameField,
-    SetsAndRepsFields,
-    TypeField,
-    UnitAndValueField,
-    VariantField,
-} from "./exercise-form-fields";
+import { CoreWeightToggleField, DayAssignmentField, DurationField, ExerciseNameField, SetsAndRepsFields, TypeField, UnitAndValueField, VariantField } from "./exercise-form-fields";
+
+import { z } from "zod";
+import { exerciseSchema } from "@/db/zod";
+import { useForm } from "react-hook-form";
+import { toast } from "react-native-sonner";
+import { useEffect, useRef, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { updateExerciseGroup } from "@/server/exercise";
 
 type EditExerciseFormValues = z.input<typeof exerciseSchema>;
 
@@ -128,13 +120,13 @@ export default function EditExercise({ exercise, exerciseIds, workoutDays, avail
             });
 
             if (result.success) {
-                toast.success(`${data.name} has been updated successfully.`);
+                toast.success("Success: Exercise updated", { description: `${data.name} has been updated successfully.` });
                 onSuccess?.();
             } else {
-                toast.error(result.error || "Failed to update exercise. Please try again.");
+                toast.error("Error: Failed to update exercise", { description: result.error || "Please try again." });
             }
         } catch {
-            toast.error("An unexpected error occurred. Please try again.");
+            toast.error("Error: An unexpected error occurred", { description: "Please try again." });
         } finally {
             setIsSubmitting(false);
         }

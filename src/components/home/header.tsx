@@ -11,10 +11,7 @@ export default function Header({ user }: { user: UserWithPlanOnly }) {
         <Row className="items-center">
             <Div className="items-start gap-2">
                 <Row className="gap-3">
-                    <Image
-                        className="border-border size-14 rounded-full border"
-                        source={user.profile ? { uri: user.profile } : require("../../../assets/images/profile.jpg")}
-                    />
+                    <Image className="border-border size-14 rounded-full border" source={user.profile ? { uri: user.profile } : require("../../../assets/images/profile.jpg")} />
                     <Div>
                         <P className="text-muted-foreground text-sm">Good {greeting}</P>
                         <H2>{user.name}</H2>

@@ -12,6 +12,10 @@ import { ExerciseWithLogs, ExerciseLog } from "@/types/types";
 import { Card, Div, Field, H3, P, Row } from "@/components/ui/display";
 import { calculateSuggestedLoad, logExerciseSet } from "@/server/workout";
 
+interface ExerciseLoggedFeedback {
+    event: "perfectDay" | "newStreak" | "newLongestStreak";
+}
+
 interface CardProp {
     logs: ExerciseLog[];
     userId: string;
@@ -20,9 +24,10 @@ interface CardProp {
     exercise: ExerciseWithLogs;
     selectedDayName: Weekday;
     onExerciseDeleted?: () => void;
+    onExerciseLogged?: (feedback: ExerciseLoggedFeedback) => void;
 }
 
-function ExerciseCard({ userId, exercise, logs, onPress, expandedId, selectedDayName, onExerciseDeleted }: CardProp) {
+function ExerciseCard({ userId, exercise, logs, onPress, expandedId, selectedDayName, onExerciseDeleted, onExerciseLogged }: CardProp) {
     const { activePlan } = usePlan();
     const { todaysLogs } = useWorkoutLogs();
 
@@ -70,11 +75,23 @@ function ExerciseCard({ userId, exercise, logs, onPress, expandedId, selectedDay
         };
 
         try {
-            await logExerciseSet({ userId, exerciseId: exercise.localId, ...payload, activePlan, todaysLogs });
-            toast.success("Set logged!");
+            const result = await logExerciseSet({ userId, exerciseId: exercise.localId, ...payload, activePlan, todaysLogs });
+
+            if (result.perfectDay && result.isNewLongestStreak) {
+                toast.success("Success: Perfect Day!", { description: "New longest streak unlocked." });
+                onExerciseLogged?.({ event: "newLongestStreak" });
+            } else if (result.perfectDay) {
+                toast.success("Success: Perfect Day!", { description: "All sets complete." });
+                onExerciseLogged?.({ event: "perfectDay" });
+            } else if (result.streakUpdated) {
+                toast.success("Success: Streak extended!", { description: "Keep the momentum going." });
+                onExerciseLogged?.({ event: "newStreak" });
+            } else {
+                toast.success("Success: Set logged!", { description: "Keep going." });
+            }
         } catch (error: any) {
             console.error(error);
-            toast.error(error.message || "Failed to log exercise");
+            toast.error("Error: Failed to log exercise", { description: error.message || "Please try again." });
         } finally {
             setIsLogging(false);
         }
@@ -93,14 +110,14 @@ function ExerciseCard({ userId, exercise, logs, onPress, expandedId, selectedDay
                     try {
                         const result = await deleteExercise({ exerciseId: exercise.localId, userId });
                         if (result.success) {
-                            toast.success("Exercise deleted");
+                            toast.success("Success: Exercise deleted", { description: "The exercise has been removed." });
                             onExerciseDeleted?.();
                         } else {
                             throw new Error(result.error || "Failed to delete exercise");
                         }
                     } catch (error: any) {
                         console.error(error);
-                        toast.error(error.message || "Failed to delete exercise");
+                        toast.error("Error: Failed to delete exercise", { description: error.message || "Please try again." });
                     } finally {
                         setIsDeleting(false);
                     }
