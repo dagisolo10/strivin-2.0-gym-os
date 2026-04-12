@@ -12,7 +12,7 @@ export default function Index() {
     const router = useRouter();
 
     useEffect(() => {
-        const timer = setTimeout(() => setMinimumStartupElapsed(true), 6000);
+        const timer = setTimeout(() => setMinimumStartupElapsed(true), 2000);
         return () => clearTimeout(timer);
     }, []);
 

@@ -3,6 +3,7 @@ import "react-native-reanimated";
 
 import { useFonts } from "expo-font";
 import { posthog } from "@/lib/posthog";
+import { useSync } from "@/hooks/use-sync";
 import { Toaster } from "react-native-sonner";
 import migrations from "@/drizzle/migrations";
 import { getDb, getExpoDb } from "@/db/client";
@@ -23,6 +24,8 @@ Sentry.init({ dsn: process.env.EXPO_PUBLIC_SENTRY_DSN, debug: false });
 function RootLayout() {
     const expoDB = getExpoDb();
     const drizzleDB = getDb();
+
+    useSync();
 
     const [fontsLoaded, fontError] = useFonts(fonts);
 

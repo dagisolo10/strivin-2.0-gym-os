@@ -6,6 +6,7 @@
     },
     "files.autoSaveDelay": 3000,
     "java.project.explorer.showNonJavaResources": false,
-    "java.dependency.syncWithFolderExplorer": true
+    "java.dependency.syncWithFolderExplorer": true,
+    "cSpell.words": ["netinfo"]
     // "files.autoSave": "off"
 }

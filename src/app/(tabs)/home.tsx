@@ -47,7 +47,8 @@ export default function HomeScreen() {
 
     if (isLoading) return <LoadingScreen />;
 
-    if (!user || !localUserId) return <ErrorScreen message="Session not available. Please sign in again." href="/(auth)/sign-in" button="Go to sign in" />;
+    if (!user || !localUserId)
+        return <ErrorScreen message={`Session not available. Please sign in again. Debug Info: ${JSON.stringify(user || "No Local User Found")}`} href="/(auth)/sign-in" button="Go to sign in" />;
 
     if (!activePlan) return <ErrorScreen message="Finish your setup to unlock your dashboard." href="/onboarding" button="Open onboarding" />;
 

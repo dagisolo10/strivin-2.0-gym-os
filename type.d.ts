@@ -23,6 +23,7 @@ declare global {
     type WorkoutSplit = "Push Pull Leg" | "Upper Lower" | "Full Body" | "Endurance" | (string & {});
 
     type ProgressionConfidence = "low" | "medium" | "high";
+    type SyncStatus = "pending" | "synced" | "failed";
 
     interface ExerciseWithLogs extends Exercise {
         logs: ExerciseLog[];

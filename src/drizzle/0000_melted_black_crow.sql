@@ -48,10 +48,15 @@ CREATE TABLE `exercises` (
 CREATE INDEX `exercises_user_id_idx` ON `exercises` (`user_id`);--> statement-breakpoint
 CREATE INDEX `exercises_plan_id_idx` ON `exercises` (`plan_id`);--> statement-breakpoint
 CREATE INDEX `exercises_day_id_idx` ON `exercises` (`workout_day_id`);--> statement-breakpoint
+CREATE TABLE `sync_metadata` (
+	`table_name` text PRIMARY KEY NOT NULL,
+	`last_synced_at` integer NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE `users` (
 	`local_id` text PRIMARY KEY NOT NULL,
 	`server_id` text,
-	`supabase_id` text,
+	`supabase_id` text NOT NULL,
 	`name` text NOT NULL,
 	`profile` text,
 	`current_streak` integer DEFAULT 0,

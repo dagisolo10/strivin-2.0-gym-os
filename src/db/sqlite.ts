@@ -2,7 +2,10 @@ import { randomUUID } from "expo-crypto";
 import { relations, sql } from "drizzle-orm";
 import { index, sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
 
-type SyncStatus = "pending" | "synced" | "failed";
+export const syncMetadata = sqliteTable("sync_metadata", {
+    tableName: text("table_name").primaryKey(),
+    lastSyncedAt: integer("last_synced_at").notNull(),
+});
 
 export const users = sqliteTable("users", {
     localId: text("local_id")
