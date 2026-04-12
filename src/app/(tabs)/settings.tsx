@@ -127,7 +127,7 @@ export default function Settings() {
                 <Row className="items-start">
                     <Row className="items-end gap-4">
                         <Div className="relative">
-                            <Image className="size-14 rounded-full" source={user?.profile ? { uri: user.profile } : require("../../../assets/images/no-user.jpg")} />
+                            <Image className="size-14 rounded-full" source={user?.profile ? { uri: user.profile } : require("../../../assets/images/images.png")} />
                             <Button className="absolute -right-1 -bottom-1 size-6 rounded-full p-0" variant="secondary" onPress={pickImage}>
                                 <Edit size={12} color="white" />
                             </Button>
