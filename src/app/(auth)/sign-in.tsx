@@ -26,7 +26,6 @@ export default function SignIn() {
 
         try {
             const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
             if (error) return setAuthError(error.message);
             if (data.session) router.replace("/(tabs)/home");
         } finally {

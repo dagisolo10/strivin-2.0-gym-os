@@ -22,20 +22,17 @@ export function useUser() {
         let cancelled = false;
         let authEventReceived = false;
         const fetchInitialSession = async () => {
-            const {
-                data: { session },
-            } = await supabase.auth.getSession();
+            const { data } = await supabase.auth.getSession();
+
             if (!cancelled && !authEventReceived) {
-                setAuth(session);
+                setAuth(data.session);
                 setAuthInitialized(true);
             }
         };
 
         fetchInitialSession();
 
-        const {
-            data: { subscription },
-        } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data } = supabase.auth.onAuthStateChange((_event, session) => {
             authEventReceived = true;
             setAuth(session);
             setAuthInitialized(true);
@@ -43,17 +40,12 @@ export function useUser() {
 
         return () => {
             cancelled = true;
-            subscription.unsubscribe();
+            data.subscription.unsubscribe();
         };
     }, [setAuth]);
 
     const db = useDrizzle();
-    const { data: liveUser } = useLiveQuery(
-        db.query.users.findFirst({
-            where: eq(users.supabaseId, supabaseUserId ?? "__no_match__"),
-        }),
-        [supabaseUserId],
-    );
+    const { data: liveUser } = useLiveQuery(db.query.users.findFirst({ where: supabaseUserId ? eq(users.supabaseId, supabaseUserId) : undefined }), [supabaseUserId]);
 
     useEffect(() => {
         if (!authInitialized) return;
@@ -67,7 +59,6 @@ export function useUser() {
 
         if (liveUser === undefined) {
             setLoading(true);
-            return;
         }
 
         setUser(liveUser ?? null);

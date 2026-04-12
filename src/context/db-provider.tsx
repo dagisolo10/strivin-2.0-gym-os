@@ -7,7 +7,7 @@ interface DrizzleProviderProps {
     db: DB;
 }
 
-export const DrizzleProvider = ({ children, db }: DrizzleProviderProps) => <DrizzleContext.Provider value={db}>{children}</DrizzleContext.Provider>;
+export const  DrizzleProvider = ({ children, db }: DrizzleProviderProps) => <DrizzleContext.Provider value={db}>{children}</DrizzleContext.Provider>;
 
 export const useDrizzle = () => {
     const context = useContext(DrizzleContext);

@@ -1,65 +1,30 @@
-import { supabase } from "@/lib/supabase";
+import { useRouter } from "expo-router";
 import { useUser } from "@/hooks/use-user";
 import { useEffect, useState } from "react";
-import { Session } from "@supabase/supabase-js";
 import { useAppData } from "@/hooks/use-app-data";
-import { useRouter, useSegments } from "expo-router";
 import StartupLoadingScreen from "@/components/ui/startup-loading-screen";
 
-const STARTUP_MINIMUM_MS = 1000;
-
 export default function Index() {
-    const segments = useSegments();
-    const { user, loading: userLoading } = useUser();
-    const { enrichedPlans, isLoading: appDataLoading } = useAppData({ includePlanDetails: true });
-    const [session, setSession] = useState<Session | null>(null);
-    const [initialized, setInitialized] = useState(false);
-    const [minimumStartupElapsed, setMinimumStartupElapsed] = useState(false);
+    const { user, loading, session: userSession, authInitialized } = useUser();
+    const { enrichedPlans, isLoading } = useAppData({ includePlanDetails: true });
 
+    const [minimumStartupElapsed, setMinimumStartupElapsed] = useState(false);
     const router = useRouter();
 
     useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session);
-            setInitialized(true);
-        });
-
-        const { data } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
-
-        return () => data.subscription.unsubscribe();
-    }, []);
-
-    useEffect(() => {
-        const timer = setTimeout(() => setMinimumStartupElapsed(true), STARTUP_MINIMUM_MS);
+        const timer = setTimeout(() => setMinimumStartupElapsed(true), 6000);
         return () => clearTimeout(timer);
     }, []);
 
     useEffect(() => {
-        if (!initialized || userLoading || appDataLoading || !minimumStartupElapsed) return;
+        if (!authInitialized || loading || isLoading || !minimumStartupElapsed) return;
 
-        const inAuthGroup = segments[0] === "(auth)";
-        const inOnboarding = segments[0] === "onboarding";
-        const hasActivePlan = enrichedPlans.length > 0;
+        const needsOnboarding = !user || enrichedPlans.length === 0;
 
-        if (!session) {
-            if (!inAuthGroup) router.replace("/(auth)/sign-up");
-            return;
-        }
-
-        if (!user) {
-            if (!inOnboarding) router.replace("/onboarding");
-            return;
-        }
-
-        if (!hasActivePlan) {
-            if (!inOnboarding) router.replace("/onboarding");
-            return;
-        }
-
-        if (segments[0] !== "(tabs)") {
-            router.replace("/(tabs)/home");
-        }
-    }, [initialized, minimumStartupElapsed, router, segments, session, user, userLoading, appDataLoading, enrichedPlans.length]);
+        if (!userSession) router.replace("/(auth)/sign-in");
+        else if (needsOnboarding) router.replace("/onboarding");
+        else router.replace("/(tabs)/home");
+    }, [authInitialized, enrichedPlans.length, isLoading, loading, minimumStartupElapsed, router, userSession, user]);
 
     return <StartupLoadingScreen />;
 }
