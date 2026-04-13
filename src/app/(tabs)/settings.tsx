@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
-import { Edit } from "lucide-react-native";
+import { Edit } from "lucide-react-native"; // Assuming you use Lucide
 import { updateUser } from "@/server/user";
 import { usePlan } from "@/hooks/use-plan";
+import { useSync } from "@/hooks/use-sync";
 import { useUser } from "@/hooks/use-user";
 import { Alert, Image } from "react-native";
 import { toast } from "react-native-sonner";
@@ -16,10 +17,13 @@ import { useForm, Controller } from "react-hook-form";
 import { usePlanStore } from "@/store/use-plan-store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PlanCarousel } from "@/components/plans/plan-carousel";
+import ManualSyncButton from "@/components/settings/sync-button";
 import { useOnboardingStore } from "@/store/use-onboarding-store";
 import { Button, Input, NavLink } from "@/components/ui/interactive";
 import { LoadingScreen, ErrorMessage } from "@/components/ui/screen-ui";
 import { Card, Div, H1, H3, P, Row, Screen, Field } from "@/components/ui/display";
+
+// Assuming you use Lucide
 
 const updateUserSchema = z.object({
     name: z.string().min(1, "Name is required"),
@@ -35,6 +39,8 @@ export default function Settings() {
     const { activePlan } = usePlan();
     const { session, loading } = useUser();
     const localUserId = useAuthStore((state) => state.localUserId);
+
+    const { isSyncing, forceSync, lastSyncTime, lastError } = useSync({ enabled: true });
 
     const setSelectedPlanId = usePlanStore((state) => state.setSelectedPlanId);
     const syncSelectedPlan = usePlanStore((state) => state.syncSelectedPlan);
@@ -206,6 +212,8 @@ export default function Settings() {
                     {isResetting ? "Resetting..." : "Reset local data"}
                 </Button>
             </Card>
+
+            <ManualSyncButton forceSync={forceSync} isSyncing={isSyncing} lastSyncTime={lastSyncTime} lastError={lastError} />
 
             <Button
                 onPress={async () => {

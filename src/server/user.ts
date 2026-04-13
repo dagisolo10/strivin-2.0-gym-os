@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { users } from "@/db/sqlite";
-import { enqueueWrite } from "@/db/write-queue";
+import { enqueueWrite } from "@/db/high-order-fn";
 
 interface UpdateUserData {
     name?: string;
@@ -13,5 +13,11 @@ export async function updateUser(userId: string, data: UpdateUserData) {
 
     const db = getDb();
 
-    return enqueueWrite(() => db.update(users).set(data).where(eq(users.localId, userId)).returning());
+    return enqueueWrite(() =>
+        db
+            .update(users)
+            .set({ ...data, updatedAt: new Date().toISOString(), syncStatus: "pending" })
+            .where(eq(users.localId, userId))
+            .returning(),
+    );
 }

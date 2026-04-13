@@ -2,7 +2,7 @@ import { getDb } from "@/db/client";
 import * as schema from "@/db/sqlite";
 import { randomUUID } from "expo-crypto";
 import { and, eq, inArray } from "drizzle-orm";
-import { enqueueWrite } from "@/db/write-queue";
+import { enqueueWrite } from "@/db/high-order-fn";
 import { getDateKey, getWeekdayName, sortWorkoutDays } from "@/lib/helper-functions";
 import { ExerciseLog, ExerciseWithLogs, ProgressionConfig, ProgressionSuggestion, SessionProgress, WorkoutPlanWithDays, WorkoutSessionWithExerciseLogs } from "@/types/types";
 
@@ -252,9 +252,7 @@ export async function logExerciseSet(data: LogData): Promise<LogResult> {
     try {
         return await enqueueWrite(() =>
             db.transaction(async (tx) => {
-                let session = await tx.query.workoutSessions.findFirst({
-                    where: (fields, { and, eq }) => and(eq(fields.userId, userId), eq(fields.date, dateKey)),
-                });
+                let session = await tx.query.workoutSessions.findFirst({ where: (fields, { and, eq }) => and(eq(fields.userId, userId), eq(fields.date, dateKey), eq(fields.isDeleted, false)) });
 
                 let sessionId = session?.localId;
 
@@ -266,7 +264,6 @@ export async function logExerciseSet(data: LogData): Promise<LogResult> {
                         date: dateKey,
                         sessionLength: null,
                         perfectDay: false,
-                        syncStatus: "pending",
                         isDeleted: false,
                     });
 
@@ -289,7 +286,7 @@ export async function logExerciseSet(data: LogData): Promise<LogResult> {
 
                 const perfectDay = computePerfectDay(data.activePlan, sessionWithLogs);
 
-                await tx.update(schema.workoutSessions).set({ perfectDay }).where(eq(schema.workoutSessions.localId, sessionId));
+                await tx.update(schema.workoutSessions).set({ perfectDay, updatedAt: new Date().toISOString(), syncStatus: "pending" }).where(eq(schema.workoutSessions.localId, sessionId));
 
                 if (perfectDay) {
                     const streakResult = await updateStreak(db, data.activePlan);
@@ -355,6 +352,8 @@ async function updateStreak(db: DB, activePlan: WorkoutPlanWithDays): Promise<{ 
                     currentStreak: 1,
                     longestStreak: updatedLongest,
                     lastStreakAwardedAt: todayKey,
+                    updatedAt: new Date().toISOString(),
+                    syncStatus: "pending",
                 })
                 .where(eq(schema.users.localId, activePlan.userId));
 
@@ -374,6 +373,8 @@ async function updateStreak(db: DB, activePlan: WorkoutPlanWithDays): Promise<{ 
                 currentStreak: newStreak,
                 longestStreak: newLongest,
                 lastStreakAwardedAt: todayKey,
+                syncStatus: "pending",
+                updatedAt: new Date().toISOString(),
             })
             .where(eq(schema.users.localId, activePlan.userId));
 

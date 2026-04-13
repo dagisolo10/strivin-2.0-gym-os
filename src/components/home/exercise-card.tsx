@@ -28,6 +28,7 @@ interface CardProp {
 }
 
 function ExerciseCard({ userId, exercise, logs, onPress, expandedId, selectedDayName, onExerciseDeleted, onExerciseLogged }: CardProp) {
+
     const { activePlan } = usePlan();
     const { todaysLogs } = useWorkoutLogs();
 

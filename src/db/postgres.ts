@@ -1,41 +1,86 @@
-import { relations } from "drizzle-orm";
-import { boolean, pgTable, real, text, integer, timestamp } from "drizzle-orm/pg-core";
+import { bigint, boolean, pgTable, real, text, integer, timestamp } from "drizzle-orm/pg-core";
+
+export const syncMetadata = pgTable("sync_metadata", {
+    tableName: text("table_name").primaryKey(),
+    lastSyncedAt: bigint("last_synced_at", { mode: "number" }).notNull(),
+});
 
 export const users = pgTable("users", {
-    id: text("id").primaryKey(),
+    localId: text("local_id").primaryKey(),
+    serverId: text("server_id"),
+
+    supabaseId: text("supabase_id").unique().notNull(),
+
     name: text("name").notNull(),
     profile: text("profile"),
+
     currentStreak: integer("current_streak").default(0),
     longestStreak: integer("longest_streak").default(0),
     lastStreakAwardedAt: text("last_streak_awarded_at"),
+
     createdAt: timestamp("created_at").defaultNow(),
+
+    syncStatus: text("sync_status").$type<SyncStatus>().default("synced").notNull(),
+    updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
 });
 
 export const workoutPlans = pgTable("workout_plans", {
-    id: text("id").primaryKey(),
+    localId: text("local_id").primaryKey(),
+    serverId: text("server_id"),
+
     userId: text("user_id")
-        .references(() => users.id, { onDelete: "cascade" })
+        .references(() => users.localId, { onDelete: "cascade" })
         .notNull(),
+
     workoutDaysPerWeek: integer("days_per_week").notNull(),
     split: text("split").$type<WorkoutSplit>().notNull(),
     goal: text("goal").$type<Goal>(),
+    fitnessLevel: text("fitness_level").$type<FitnessLevel>(),
+
     createdAt: timestamp("created_at").defaultNow(),
+
+    syncStatus: text("sync_status").$type<SyncStatus>().default("synced").notNull(),
+    isDeleted: boolean("is_deleted").default(false),
+    updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
 });
 
 export const workoutDays = pgTable("workout_days", {
-    id: text("id").primaryKey(),
-    planId: text("plan_id")
-        .references(() => workoutPlans.id, { onDelete: "cascade" })
+    localId: text("local_id").primaryKey(),
+    serverId: text("server_id"),
+
+    userId: text("user_id")
+        .references(() => users.localId, { onDelete: "cascade" })
         .notNull(),
+
+    planId: text("plan_id")
+        .references(() => workoutPlans.localId, { onDelete: "cascade" })
+        .notNull(),
+
     dayName: text("day_name").notNull(),
-    targetDuration: integer("target_duration").default(60),
+
+    createdAt: timestamp("created_at").defaultNow(),
+
+    syncStatus: text("sync_status").$type<SyncStatus>().default("synced").notNull(),
+    isDeleted: boolean("is_deleted").default(false),
+    updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
 });
 
 export const exercises = pgTable("exercises", {
-    id: text("id").primaryKey(),
-    workoutDay: text("workout_day_id")
-        .references(() => workoutDays.id, { onDelete: "cascade" })
+    localId: text("local_id").primaryKey(),
+    serverId: text("server_id"),
+
+    userId: text("user_id")
+        .references(() => users.localId, { onDelete: "cascade" })
         .notNull(),
+
+    planId: text("plan_id")
+        .references(() => workoutPlans.localId, { onDelete: "cascade" })
+        .notNull(),
+
+    workoutDayId: text("workout_day_id")
+        .references(() => workoutDays.localId, { onDelete: "cascade" })
+        .notNull(),
+
     name: text("name").notNull(),
 
     sets: integer("sets"),
@@ -48,24 +93,47 @@ export const exercises = pgTable("exercises", {
     unit: text("unit").default("kg").$type<Unit>(),
     type: text("type").$type<ExerciseType>().notNull(),
     variant: text("variant").$type<ExerciseVariant>().notNull(),
+
+    createdAt: timestamp("created_at").defaultNow(),
+
+    syncStatus: text("sync_status").$type<SyncStatus>().default("synced").notNull(),
+    isDeleted: boolean("is_deleted").default(false),
+    updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
 });
 
 export const workoutSessions = pgTable("workout_sessions", {
-    id: text("id").primaryKey(),
+    localId: text("local_id").primaryKey(),
+    serverId: text("server_id"),
+
     userId: text("user_id")
-        .references(() => users.id, { onDelete: "cascade" })
+        .references(() => users.localId, { onDelete: "cascade" })
         .notNull(),
-    date: timestamp("date").defaultNow().notNull(),
-    perfectDay: boolean("perfect_day").default(false).notNull(),
+
+    date: text("date").notNull(),
+    sessionLength: integer("session_length"),
+    perfectDay: boolean("perfect_day").default(false),
+
+    createdAt: timestamp("created_at").defaultNow(),
+
+    syncStatus: text("sync_status").$type<SyncStatus>().default("synced").notNull(),
+    isDeleted: boolean("is_deleted").default(false),
+    updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
 });
 
 export const exerciseLogs = pgTable("exercise_logs", {
-    id: text("id").primaryKey(),
-    sessionId: text("session_id")
-        .references(() => workoutSessions.id, { onDelete: "cascade" })
+    localId: text("local_id").primaryKey(),
+    serverId: text("server_id"),
+
+    userId: text("user_id")
+        .references(() => users.localId, { onDelete: "cascade" })
         .notNull(),
+
+    sessionId: text("session_id")
+        .references(() => workoutSessions.localId, { onDelete: "cascade" })
+        .notNull(),
+
     exerciseId: text("exercise_id")
-        .references(() => exercises.id, { onDelete: "cascade" })
+        .references(() => exercises.localId, { onDelete: "cascade" })
         .notNull(),
 
     reps: real("reps"),
@@ -74,40 +142,11 @@ export const exerciseLogs = pgTable("exercise_logs", {
     duration: integer("duration"),
     distance: real("distance"),
 
-    completed: boolean("completed").default(false).notNull(),
-    date: timestamp("date").defaultNow().notNull(),
+    completed: boolean("completed").default(false),
+
+    createdAt: timestamp("created_at").defaultNow(),
+
+    syncStatus: text("sync_status").$type<SyncStatus>().default("synced").notNull(),
+    isDeleted: boolean("is_deleted").default(false),
+    updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
 });
-
-// --- Relations ---
-
-export const workoutPlansRelations = relations(workoutPlans, ({ many }) => ({
-    days: many(workoutDays),
-}));
-
-export const workoutDaysRelations = relations(workoutDays, ({ one, many }) => ({
-    plan: one(workoutPlans, { fields: [workoutDays.planId], references: [workoutPlans.id] }),
-    exercises: many(exercises),
-}));
-
-export const exercisesRelations = relations(exercises, ({ one, many }) => ({
-    day: one(workoutDays, { fields: [exercises.workoutDay], references: [workoutDays.id] }),
-    logs: many(exerciseLogs),
-}));
-
-export const workoutSessionsRelations = relations(workoutSessions, ({ one, many }) => ({
-    logs: many(exerciseLogs),
-}));
-
-export const exerciseLogsRelations = relations(exerciseLogs, ({ one }) => ({
-    session: one(workoutSessions, { fields: [exerciseLogs.sessionId], references: [workoutSessions.id] }),
-    exercise: one(exercises, { fields: [exerciseLogs.exerciseId], references: [exercises.id] }),
-}));
-
-// --- Export Types ---
-
-// export type User = typeof users.$inferSelect;
-// export type WorkoutPlan = typeof workoutPlans.$inferSelect;
-// export type WorkoutDay = typeof workoutDays.$inferSelect;
-// export type Exercise = typeof exercises.$inferSelect;
-// export type WorkoutSession = typeof workoutSessions.$inferSelect;
-// export type ExerciseLog = typeof exerciseLogs.$inferSelect;

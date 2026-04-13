@@ -3,7 +3,7 @@ import * as schema from "./sqlite";
 import { drizzle } from "drizzle-orm/expo-sqlite";
 import { SQLiteDatabase, openDatabaseSync } from "expo-sqlite";
 
-const DATABASE_NAME = "Strivin_v10.db";
+const DATABASE_NAME = "Strivin_v16.db";
 
 let expoDb: ReturnType<typeof openDatabaseSync> | null = null;
 let drizzleDb: DB | null = null;

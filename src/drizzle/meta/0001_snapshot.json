@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "6924d659-2111-4e7a-ae93-dadf4a36d6b8",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "9f2bdde1-18b1-4ae3-a5ce-cb5b2072654a",
+  "prevId": "6924d659-2111-4e7a-ae93-dadf4a36d6b8",
   "tables": {
     "exercise_logs": {
       "name": "exercise_logs",
@@ -768,8 +768,7 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "autoincrement": false
         },
         "session_length": {
           "name": "session_length",
