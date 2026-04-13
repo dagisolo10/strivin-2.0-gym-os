@@ -2,7 +2,7 @@ import { getDb } from "@/db/client";
 import * as schema from "@/db/sqlite";
 import { randomUUID } from "expo-crypto";
 import { and, eq, inArray } from "drizzle-orm";
-import { enqueueWrite } from "@/db/write-queue";
+import { enqueueWrite } from "@/db/high-order-fn";
 
 interface DeleteExerciseData {
     exerciseId: string;
@@ -57,13 +57,7 @@ export async function addExercise(data: Data) {
                 const [plan] = await tx
                     .select()
                     .from(schema.workoutPlans)
-                    .where(
-                        and(
-                            eq(schema.workoutPlans.localId, data.planId),
-                            eq(schema.workoutPlans.userId, data.userId),
-                            eq(schema.workoutPlans.isDeleted, false),
-                        ),
-                    )
+                    .where(and(eq(schema.workoutPlans.localId, data.planId), eq(schema.workoutPlans.userId, data.userId), eq(schema.workoutPlans.isDeleted, false)))
                     .limit(1);
 
                 if (!plan) throw new Error("Plan not found");
@@ -127,10 +121,7 @@ export async function deleteExercise(data: DeleteExerciseData) {
 
                 if (!exercise) throw new Error("Exercise not found");
 
-                await tx
-                    .update(schema.exercises)
-                    .set({ isDeleted: true, updatedAt: new Date().toISOString() })
-                    .where(eq(schema.exercises.localId, data.exerciseId));
+                await tx.update(schema.exercises).set({ isDeleted: true, updatedAt: new Date().toISOString(), syncStatus: "pending" }).where(eq(schema.exercises.localId, data.exerciseId));
             }),
         );
 
@@ -153,15 +144,13 @@ export async function deleteExerciseGroup(data: DeleteExerciseGroupData) {
                 const exercises = await tx
                     .select()
                     .from(schema.exercises)
-                    .where(
-                        and(inArray(schema.exercises.localId, exerciseIds), eq(schema.exercises.userId, data.userId), eq(schema.exercises.isDeleted, false)),
-                    );
+                    .where(and(inArray(schema.exercises.localId, exerciseIds), eq(schema.exercises.userId, data.userId), eq(schema.exercises.isDeleted, false)));
 
                 if (!exercises.length) throw new Error("Exercise group not found");
 
                 await tx
                     .update(schema.exercises)
-                    .set({ isDeleted: true, updatedAt: new Date().toISOString() })
+                    .set({ isDeleted: true, updatedAt: new Date().toISOString(), syncStatus: "pending" })
                     .where(
                         inArray(
                             schema.exercises.localId,
@@ -194,6 +183,7 @@ export async function updateExercise(data: UpdateExerciseData) {
 
                 const updateData: any = {
                     updatedAt: new Date().toISOString(),
+                    syncStatus: "pending",
                 };
 
                 if ("name" in data.exercise) updateData.name = data.exercise.name;
@@ -231,22 +221,14 @@ export async function updateExerciseGroup(data: UpdateExerciseGroupData) {
                 const exercises = await tx
                     .select()
                     .from(schema.exercises)
-                    .where(
-                        and(inArray(schema.exercises.localId, exerciseIds), eq(schema.exercises.userId, data.userId), eq(schema.exercises.isDeleted, false)),
-                    );
+                    .where(and(inArray(schema.exercises.localId, exerciseIds), eq(schema.exercises.userId, data.userId), eq(schema.exercises.isDeleted, false)));
 
                 if (!exercises.length) throw new Error("Exercise group not found");
 
                 const [plan] = await tx
                     .select()
                     .from(schema.workoutPlans)
-                    .where(
-                        and(
-                            eq(schema.workoutPlans.localId, data.planId),
-                            eq(schema.workoutPlans.userId, data.userId),
-                            eq(schema.workoutPlans.isDeleted, false),
-                        ),
-                    )
+                    .where(and(eq(schema.workoutPlans.localId, data.planId), eq(schema.workoutPlans.userId, data.userId), eq(schema.workoutPlans.isDeleted, false)))
                     .limit(1);
 
                 if (!plan) throw new Error("Plan not found");
@@ -273,6 +255,7 @@ export async function updateExerciseGroup(data: UpdateExerciseGroupData) {
 
                 const updateData: Record<string, unknown> = {
                     updatedAt: new Date().toISOString(),
+                    syncStatus: "pending",
                 };
 
                 if ("name" in data.exercise) updateData.name = data.exercise.name;
@@ -321,7 +304,7 @@ export async function updateExerciseGroup(data: UpdateExerciseGroupData) {
                         if (duplicates.length) {
                             await tx
                                 .update(schema.exercises)
-                                .set({ isDeleted: true, updatedAt: new Date().toISOString() })
+                                .set({ isDeleted: true, updatedAt: new Date().toISOString(), syncStatus: "pending" })
                                 .where(
                                     inArray(
                                         schema.exercises.localId,
@@ -354,7 +337,7 @@ export async function updateExerciseGroup(data: UpdateExerciseGroupData) {
                 if (exerciseIdsToDelete.length) {
                     await tx
                         .update(schema.exercises)
-                        .set({ isDeleted: true, updatedAt: new Date().toISOString() })
+                        .set({ isDeleted: true, updatedAt: new Date().toISOString(), syncStatus: "pending" })
                         .where(inArray(schema.exercises.localId, exerciseIdsToDelete));
                 }
             }),

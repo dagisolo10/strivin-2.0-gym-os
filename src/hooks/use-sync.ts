@@ -1,37 +1,22 @@
 import * as schema from "@/db/sqlite";
-import { useEffect, useRef } from "react";
+import { withRetry } from "@/db/high-order-fn";
 import { pushChanges, pullChanges } from "@/db/sync";
 import NetInfo from "@react-native-community/netinfo";
-
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 3, baseDelay = 1000): Promise<T> {
-    let lastError: any;
-
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        try {
-            return await fn();
-        } catch (error: any) {
-            lastError = error;
-
-            if (error.message?.includes("constraint") || error.status === 400) throw error;
-
-            if (attempt < maxAttempts) {
-                const waitTime = baseDelay * Math.pow(2, attempt - 1); // 1s, 2s, 4s
-                console.warn(`Sync attempt ${attempt} failed. Retrying in ${waitTime}ms...`);
-                await delay(waitTime);
-            }
-        }
-    }
-    throw lastError;
-}
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export function useSync({ enabled }: { enabled: boolean }) {
+    const [isSyncingState, setIsSyncingState] = useState(false);
+    const [lastError, setLastError] = useState<Error | null>(null);
+    const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+
     const isSyncing = useRef(false);
 
-    async function performFullSync() {
+    const performFullSync = useCallback(async () => {
         if (isSyncing.current) return;
+
         isSyncing.current = true;
+        setIsSyncingState(true);
+        setLastError(null);
 
         try {
             const tables = [
@@ -45,21 +30,23 @@ export function useSync({ enabled }: { enabled: boolean }) {
 
             for (const table of tables) {
                 console.log(`Syncing ${table.tableName}...`);
-
                 await withRetry(async () => {
                     await pushChanges(table.tableName, table.table);
                     await pullChanges(table.tableName, table.table);
                 });
-
                 console.log(`Successfully synced ${table.tableName}`);
             }
+
+            setLastSyncTime(new Date());
             console.log("Sync Complete!");
-        } catch (e) {
+        } catch (e: any) {
+            setLastError(e);
             console.error("Sync aborted due to critical error:", e);
         } finally {
             isSyncing.current = false;
+            setIsSyncingState(false);
         }
-    }
+    }, []);
 
     useEffect(() => {
         if (!enabled) return;
@@ -79,5 +66,7 @@ export function useSync({ enabled }: { enabled: boolean }) {
         });
 
         return () => unsubscribe();
-    }, [enabled]);
+    }, [enabled, performFullSync]);
+
+    return { lastError, lastSyncTime, isSyncing: isSyncingState, forceSync: performFullSync };
 }

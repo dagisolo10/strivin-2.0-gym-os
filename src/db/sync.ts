@@ -13,7 +13,7 @@ export async function pushChanges<T extends AnySQLiteTable>(tableName: string, s
     if (pendingRecords.length === 0) return;
 
     const recordToPush = pendingRecords.map((record) => {
-        const data = mapToSnakeCase(record);
+        const data = mapToSnakeCase(record, tableName);
 
         if (tableName === "workout_plans" && data.workout_days_per_week) {
             data.days_per_week = data.workout_days_per_week;
@@ -38,9 +38,11 @@ export async function pushChanges<T extends AnySQLiteTable>(tableName: string, s
             });
         } catch (localError) {
             console.error(`Local update failed for ${tableName}:`, localError);
+            throw localError;
         }
     } else {
         console.error(`Error pushing ${tableName}:`, error.message);
+        throw new Error(`Error pushing ${tableName}: ${error.message}`);
     }
 }
 
@@ -54,8 +56,7 @@ export async function pullChanges<T extends AnySQLiteTable>(tableName: string, s
     const { data: cloudData, error } = await supabase.from(tableName).select("*").gt("updated_at", lastSyncDate).order("updated_at", { ascending: true });
 
     if (error) {
-        console.error(`Error pulling ${tableName}:`, error.message);
-        return;
+        throw new Error(`Pull failed for ${tableName}: ${error.message}`);
     }
 
     if (cloudData && cloudData.length > 0) {
@@ -63,7 +64,14 @@ export async function pullChanges<T extends AnySQLiteTable>(tableName: string, s
         try {
             await db.transaction(async (tx) => {
                 for (const item of cloudData) {
-                    const localItem = mapToCamelCase(item);
+                    const localItem = mapToCamelCase(item, tableName);
+
+                    const [existingLocal] = await tx.select({ syncStatus: schemaTable.syncStatus }).from(schemaTable).where(eq(schemaTable.localId, localItem.localId)).limit(1);
+
+                    if (existingLocal?.syncStatus === "pending") {
+                        console.log(`Skipping pull for ${tableName}:${localItem.localId} because local is pending.`);
+                        continue;
+                    }
 
                     if (tableName === "workout_plans") localItem.workoutDaysPerWeek = item.days_per_week;
 
@@ -88,6 +96,7 @@ export async function pullChanges<T extends AnySQLiteTable>(tableName: string, s
                 .onConflictDoUpdate({ target: syncMetadata.tableName, set: { lastSyncedAt: latestProcessedTs } });
         } catch (dbError) {
             console.error(`Database Pull Error for ${tableName}:`, dbError);
+            throw dbError;
         }
     }
 }

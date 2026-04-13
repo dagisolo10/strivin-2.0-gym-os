@@ -3,7 +3,6 @@ import "react-native-reanimated";
 
 import { useFonts } from "expo-font";
 import { posthog } from "@/lib/posthog";
-import { useSync } from "@/hooks/use-sync";
 import { Toaster } from "react-native-sonner";
 import migrations from "@/drizzle/migrations";
 import { getDb, getExpoDb } from "@/db/client";
@@ -29,8 +28,6 @@ function RootLayout() {
 
     const { error, success } = useMigrations(drizzleDB, migrations);
     useDrizzleStudio(success ? expoDB : null);
-
-    useSync({ enabled: success });
 
     const isReady = (fontsLoaded || fontError) && (success || error);
 

@@ -1,6 +1,6 @@
 import { getDb } from "@/db/client";
 import { supabase } from "@/lib/supabase";
-import { enqueueWrite } from "@/db/write-queue";
+import { enqueueWrite } from "@/db/high-order-fn";
 import { exercises, users, workoutDays, workoutPlans } from "@/db/sqlite";
 
 interface ExerciseInput {

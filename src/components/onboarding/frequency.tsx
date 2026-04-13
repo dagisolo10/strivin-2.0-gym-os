@@ -74,7 +74,7 @@ export default function Frequency() {
                                         key={day}
                                         variant={isSelected ? "secondary" : "outline"}
                                         textClassName={isSelected ? "text-background" : "text-muted-foreground"}
-                                        className={cn(error && "border-destructive", "min-w-28 flex-1 px-4")}
+                                        className={cn(error && "border-destructive", "min-w-28 flex-1 px-0")}
                                         onPress={() => {
                                             const next = isSelected ? value.filter((d: string) => d !== day) : [...value, day];
                                             onChange(next);

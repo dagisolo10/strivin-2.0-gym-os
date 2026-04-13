@@ -18,22 +18,24 @@ export function useHomeData(selectedDayName: Weekday | undefined, { activePlan, 
         const workoutDay = activePlanDay ?? workoutDays.find((day) => day.dayName === dayName && day.planId === activePlan?.localId);
 
         const todaysExercises = activePlanDay?.exercises ?? [];
-        
+
         const todaysSession = sessions.find((session) => session.date === todayKey);
-        
-        const todaysLogs = logs.filter((log) => log.sessionId === todaysSession?.localId);
-        
-        const todaysLogsByExerciseId = todaysLogs.reduce<Record<string, ExerciseLog[]>>((accumulator, log) => {
-            accumulator[log.exerciseId] = [...(accumulator[log.exerciseId] ?? []), log];
-            return accumulator;
+
+        const todaysSessionIds = sessions.filter((session) => session.date === todayKey).map((s) => s.localId);
+
+        const todaysLogs = logs.filter((log) => todaysSessionIds.includes(log.sessionId));
+
+        const todaysLogsByExerciseId = todaysLogs.reduce<Record<string, ExerciseLog[]>>((acc, log) => {
+            acc[log.exerciseId] = [...(acc[log.exerciseId] ?? []), log];
+            return acc;
         }, {});
-        
+
         const totalSets = todaysExercises.reduce((sum: number, exercise) => sum + (exercise.sets ?? 1), 0);
-        
+
         const totalExercises = activePlan?.days?.reduce((sum, day) => sum + (day.exercises?.length ?? 0), 0) ?? 0;
-        
+
         const completedSets = todaysLogs.length;
-        
+
         const progress = totalSets ? Math.round((completedSets / totalSets) * 100) : 0;
 
         return { workoutDay, todaysExercises, totalSets, totalExercises, todaysSession, todaysLogs, todaysLogsByExerciseId, progress };

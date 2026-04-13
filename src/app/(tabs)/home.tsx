@@ -1,3 +1,4 @@
+import { usePlan } from "@/hooks/use-plan";
 import { FlatList, View } from "react-native";
 import Header from "@/components/home/header";
 import { useHomeData } from "@/hooks/use-home";
@@ -22,24 +23,24 @@ export default function HomeScreen() {
     const [expandedExerciseId, setExpandedExerciseId] = useState<string | null>(null);
     const [confettiEvent, setConfettiEvent] = useState<"perfectDay" | "newStreak" | "newLongestStreak" | null>(null);
 
-    const { isLoading, updatedAt, user, plans, enrichedPlans, workoutDays, sessionsWithLogs, logs } = useAppData({
-        includePlanDetails: true,
-        includeWorkoutHistory: true,
-    });
+    const { activePlan } = usePlan();
+    const { isLoading, updatedAt, user, plans, enrichedPlans, workoutDays, sessionsWithLogs, logs } = useAppData({ includePlanDetails: true, includeWorkoutHistory: true });
     const localUserId = useAuthStore((state) => state.localUserId);
 
     const setSelectedPlanId = usePlanStore((state) => state.setSelectedPlanId);
     const syncSelectedPlan = usePlanStore((state) => state.syncSelectedPlan);
-    const selectedPlanId = usePlanStore((state) => state.selectedPlanId);
-    const activePlan = enrichedPlans.find((plan) => plan.localId === selectedPlanId) ?? enrichedPlans[0] ?? null;
+
     const handleExerciseLogged = (feedback: { event: "perfectDay" | "newStreak" | "newLongestStreak" }) => setConfettiEvent(feedback.event);
     const isWorkoutDay = Boolean(activePlan?.days.some((day) => day.dayName === selectedDayName));
+
     const { tables, values } = useHomeData(selectedDayName, { activePlan, workoutDays, sessions: sessionsWithLogs, logs });
+    const { workoutDay, todaysSession, todaysExercises, todaysLogsByExerciseId } = tables;
+    const { progress, totalExercises, completedSets, totalSets } = values;
 
     const isPerfectDay = useMemo(() => {
-        if (!activePlan || !tables.todaysSession) return false;
-        return computePerfectDay(activePlan, tables.todaysSession);
-    }, [activePlan, tables.todaysSession]);
+        if (!activePlan || !todaysSession) return false;
+        return computePerfectDay(activePlan, todaysSession);
+    }, [activePlan, todaysSession]);
 
     useEffect(() => {
         if (enrichedPlans.length) syncSelectedPlan(enrichedPlans.map((plan) => plan.localId));
@@ -49,7 +50,7 @@ export default function HomeScreen() {
 
     if (!user || !localUserId) {
         const debugInfo = __DEV__ ? ` Debug Info: ${JSON.stringify(user ?? "No Local User Found")}` : "";
-        return <ErrorScreen message={`Session not available. Please sign in again. Debug Info: ${debugInfo}`} href="/(auth)/sign-in" button="Go to sign in" />;
+        return <ErrorScreen message={`Session not available. Please sign in again. ${debugInfo}`} href="/(auth)/sign-in" button="Go to sign in" />;
     }
 
     if (!activePlan) return <ErrorScreen message="Finish your setup to unlock your dashboard." href="/onboarding" button="Open onboarding" />;
@@ -64,11 +65,11 @@ export default function HomeScreen() {
 
                             <StatusCard
                                 plan={activePlan}
-                                progress={values.progress}
-                                totalSets={values.totalSets}
+                                progress={progress}
+                                totalSets={totalSets}
                                 currentStreak={user.currentStreak ?? 0}
                                 longestStreak={user.longestStreak ?? 0}
-                                completedSets={values.completedSets}
+                                completedSets={completedSets}
                             />
 
                             <PlanCarousel
@@ -79,19 +80,19 @@ export default function HomeScreen() {
                                 subtitle="Swipe through plans and choose which routine you want to run today."
                             />
 
-                            <Snapshot plan={activePlan} totalExercises={values.totalExercises} />
+                            <Snapshot plan={activePlan} totalExercises={totalExercises} />
 
                             <DayCarousel selectedDayName={selectedDayName} plan={activePlan} onSelect={setSelectedDayName} />
 
                             <Row className="mb-2">
-                                <H3>{tables.workoutDay?.dayName === getWeekdayName() ? "Today's Routine" : `${selectedDayName}'s Routine`}</H3>
-                                <Badge variant={isPerfectDay ? "success" : "outline"}>{!tables.todaysSession ? "Not Started" : isPerfectDay ? "Perfect Day" : "In Progress"}</Badge>
+                                <H3>{workoutDay?.dayName === getWeekdayName() ? "Today's Routine" : `${selectedDayName}'s Routine`}</H3>
+                                <Badge variant={isPerfectDay ? "success" : "outline"}>{!todaysSession ? "Not Started" : isPerfectDay ? "Perfect Day" : "In Progress"}</Badge>
                             </Row>
                         </Div>
                     }
                     ListFooterComponent={() => <Separator vertical />}
-                    data={tables.todaysExercises}
-                    extraData={`${updatedAt}-${expandedExerciseId}-${values.completedSets}-${tables.todaysExercises?.length ?? 0}`}
+                    data={todaysExercises}
+                    extraData={`${updatedAt}-${expandedExerciseId}-${completedSets}-${todaysExercises?.length ?? 0}`}
                     keyExtractor={(ex) => String(ex.localId)}
                     showsVerticalScrollIndicator={false}
                     contentContainerClassName="pb-24"
@@ -103,7 +104,7 @@ export default function HomeScreen() {
                             exercise={exercise}
                             selectedDayName={selectedDayName}
                             expandedId={expandedExerciseId}
-                            logs={tables.todaysLogsByExerciseId[exercise.localId] ?? []}
+                            logs={todaysLogsByExerciseId[exercise.localId] ?? []}
                             onPress={() => setExpandedExerciseId((currentId) => (currentId === exercise.localId ? null : exercise.localId))}
                             onExerciseLogged={handleExerciseLogged}
                         />

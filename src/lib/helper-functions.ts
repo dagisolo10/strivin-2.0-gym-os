@@ -1,7 +1,12 @@
 import { DAY_ORDER } from "@/constants/data";
 
-export function getDateKey(date = new Date()) {
+export function getDateKeys(date = new Date()) {
     return date.toISOString().slice(0, 10);
+}
+
+export function getDateKey(date: Date | string = new Date()) {
+    const d = typeof date === "string" ? new Date(date) : date;
+    return d.toISOString().split("T")[0];
 }
 
 export function formatDateLabel(value: string) {
@@ -19,12 +24,13 @@ export function sortWorkoutDays(days: Weekday[]) {
 const toSnakeCase = (str: string) => str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
 const toCamelCase = (str: string) => str.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
 
-export const mapToSnakeCase = (obj: Record<string, any>) => {
+export const mapToSnakeCase = (obj: Record<string, any>, tableName?: string) => {
     const snakeObj: Record<string, any> = {};
+    const mapping = tableName ? TABLE_FIELD_MAPPING[tableName] : null;
 
     Object.keys(obj).forEach((key) => {
         const value = obj[key];
-        const snakeKey = toSnakeCase(key);
+        const snakeKey = mapping && mapping[key] ? mapping[key] : toSnakeCase(key);
 
         if (typeof value === "number" && (snakeKey === "is_deleted" || snakeKey === "perfect_day" || snakeKey === "completed")) {
             snakeObj[snakeKey] = value === 1;
@@ -38,13 +44,32 @@ export const mapToSnakeCase = (obj: Record<string, any>) => {
     return snakeObj;
 };
 
-export const mapToCamelCase = (obj: Record<string, any>) => {
+export const mapToCamelCase = (obj: Record<string, any>, tableName?: string) => {
     const camelObj: Record<string, any> = {};
+    const mapping = tableName ? TABLE_FIELD_MAPPING[tableName] : null;
+
+    const reverseMapping: Record<string, string> = {};
+
+    if (mapping) {
+        Object.entries(mapping).forEach(([camel, snake]) => (reverseMapping[snake] = camel));
+    }
 
     Object.keys(obj).forEach((key) => {
-        const camelKey = toCamelCase(key);
-        camelObj[camelKey] = obj[key];
+        const camelKey = reverseMapping[key] ? reverseMapping[key] : toCamelCase(key);
+        const value = obj[key];
+
+        if (typeof value === "boolean" && ["isDeleted", "perfectDay", "completed"].includes(camelKey)) {
+            camelObj[camelKey] = value ? 1 : 0;
+        } else {
+            camelObj[camelKey] = value;
+        }
     });
 
     return camelObj;
+};
+
+export const TABLE_FIELD_MAPPING: Record<string, Record<string, string>> = {
+    workout_plans: {
+        workoutDaysPerWeek: "days_per_week",
+    },
 };

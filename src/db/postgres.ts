@@ -109,7 +109,7 @@ export const workoutSessions = pgTable("workout_sessions", {
         .references(() => users.localId, { onDelete: "cascade" })
         .notNull(),
 
-    date: timestamp("date").defaultNow().notNull(),
+    date: text("date").notNull(),
     sessionLength: integer("session_length"),
     perfectDay: boolean("perfect_day").default(false),
 

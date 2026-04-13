@@ -1,8 +1,9 @@
+import { FlatList } from "react-native";
 import { useEffect, useMemo } from "react";
-import { ActivityIndicator, FlatList } from "react-native";
 import { useAppData } from "@/hooks/use-app-data";
 import { usePlanStore } from "@/store/use-plan-store";
 import { formatDateLabel } from "@/lib/helper-functions";
+import { LoadingScreen } from "@/components/ui/screen-ui";
 import { PlanCarousel } from "@/components/plans/plan-carousel";
 import { Badge, Card, Div, H1, H2, H3, P, Row, Screen } from "@/components/ui/display";
 
@@ -21,23 +22,14 @@ export default function ProgressScreen() {
     const activePlan = (plans ?? []).find((plan) => plan.localId === selectedPlanId) ?? plans?.[0];
     const { plannedExerciseCount, totalVolume, perfectDays, averageSetsPerSession, completionRate } = useMemo(() => {
         const plannedExerciseCount = activePlan?.days.reduce((sum: number, day: any) => sum + (day.exercises?.length ?? 0), 0) ?? 0;
-        const totalVolume = sessions.reduce(
-            (sum, session) => sum + session.logs.reduce((sessionSum, log) => sessionSum + (log.weight ?? 0) * (log.reps ?? 0), 0),
-            0,
-        );
+        const totalVolume = sessions.reduce((sum, session) => sum + session.logs.reduce((sessionSum, log) => sessionSum + (log.weight ?? 0) * (log.reps ?? 0), 0), 0);
         const perfectDays = sessions.filter((session) => session.perfectDay).length;
         const averageSetsPerSession = sessions.length ? Math.round(sessions.reduce((sum, session) => sum + session.logs.length, 0) / sessions.length) : 0;
         const completionRate = sessions.length ? Math.round((perfectDays / sessions.length) * 100) : 0;
         return { plannedExerciseCount, totalVolume, perfectDays, averageSetsPerSession, completionRate };
     }, [activePlan, sessions]);
 
-    if (!user) {
-        return (
-            <Screen className="items-center justify-center">
-                <ActivityIndicator size="large" />
-            </Screen>
-        );
-    }
+    if (!user) return <LoadingScreen />;
 
     return (
         <Screen nonScrollable>
@@ -53,9 +45,7 @@ export default function ProgressScreen() {
                         <Div className="gap-2">
                             <Div>
                                 <H3>Progress</H3>
-                                <P className="text-muted-foreground">
-                                    See how your consistency, session quality, and training load are trending across your local workout history.
-                                </P>
+                                <P className="text-muted-foreground">See how your consistency, session quality, and training load are trending across your local workout history.</P>
                             </Div>
 
                             <Card variant={"accent"} className="gap-4">
