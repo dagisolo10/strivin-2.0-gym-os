@@ -63,7 +63,7 @@ function TabItem({ isFocused, onPress, onLongPress, options, tabWidth }: TabItem
     const scale = useSharedValue(1);
     const animatedIconStyle = useAnimatedStyle(() => {
         return {
-            transform: [{ scale: scale.value * (isFocused ? 1.15 : 1) }, { translateY: withSpring(isFocused ? -2 : 0, SPRING_CONFIG) }],
+            transform: [{ translateY: withSpring(isFocused ? -2 : 0, SPRING_CONFIG) }],
             opacity: withTiming(isFocused ? 1 : 0.6, { duration: 200 }),
         };
     });
@@ -72,7 +72,12 @@ function TabItem({ isFocused, onPress, onLongPress, options, tabWidth }: TabItem
     const handlePressOut = () => (scale.value = withSpring(1, SPRING_CONFIG));
 
     return (
-        <Pressable onPress={onPress} onLongPress={onLongPress} onPressIn={handlePressIn} onPressOut={handlePressOut} style={{ width: tabWidth, height: TAB_HEIGHT, alignItems: "center", justifyContent: "center" }}>
+        <Pressable
+            onPress={onPress}
+            onLongPress={onLongPress}
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            style={{ width: tabWidth, height: TAB_HEIGHT, alignItems: "center", justifyContent: "center" }}>
             <Animated.View style={animatedIconStyle}>{options.tabBarIcon ? options.tabBarIcon({ focused: isFocused, color: "", size: 0 }) : null}</Animated.View>
         </Pressable>
     );
@@ -103,13 +108,13 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        paddingHorizontal: 6,
+        paddingHorizontal: 5,
     },
     indicator: {
         position: "absolute",
         height: TAB_HEIGHT - 12,
         borderRadius: 48,
         backgroundColor: "#ea7a53b3",
-        left: 6,
+        left: 5,
     },
 });
