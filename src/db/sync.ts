@@ -1,40 +1,57 @@
 import { getDb } from "./client";
 import { syncMetadata } from "./sqlite";
 
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { supabase } from "@/lib/supabase";
+import { AnySQLiteTable } from "drizzle-orm/sqlite-core";
 import { mapToSnakeCase, mapToCamelCase } from "@/lib/helper-functions";
 
-export async function pushChanges(tableName: string, schemaTable: any) {
+export async function pushChanges<T extends AnySQLiteTable>(tableName: string, schemaTable: T & { syncStatus: any; localId: any }) {
     const db = getDb();
     const pendingRecords = await db.select().from(schemaTable).where(eq(schemaTable.syncStatus, "pending"));
 
-    for (const record of pendingRecords) {
-        const dataToPush = mapToSnakeCase(record);
+    if (pendingRecords.length === 0) return;
 
-        if (tableName === "workout_plans" && dataToPush.workout_days_per_week) {
-            dataToPush.days_per_week = dataToPush.workout_days_per_week;
-            delete dataToPush.workout_days_per_week;
+    const recordToPush = pendingRecords.map((record) => {
+        const data = mapToSnakeCase(record);
+
+        if (tableName === "workout_plans" && data.workout_days_per_week) {
+            data.days_per_week = data.workout_days_per_week;
+            delete data.workout_days_per_week;
         }
 
-        dataToPush.sync_status = "synced";
+        data.sync_status = "synced";
+        return data;
+    });
 
-        const { error } = await supabase.from(tableName).upsert(dataToPush);
+    const { error } = await supabase.from(tableName).upsert(recordToPush);
 
-        if (!error) {
-            await db.update(schemaTable).set({ syncStatus: "synced" }).where(eq(schemaTable.localId, record.localId));
-        } else {
-            console.error(`Error pushing ${tableName}:`, error.message);
+    if (!error) {
+        const pushedLocalIds = pendingRecords.map((record) => record.localId);
+
+        try {
+            await db.transaction(async (tx) => {
+                await tx
+                    .update(schemaTable)
+                    .set({ syncStatus: "synced" } as any)
+                    .where(inArray(schemaTable.localId, pushedLocalIds));
+            });
+        } catch (localError) {
+            console.error(`Local update failed for ${tableName}:`, localError);
         }
+    } else {
+        console.error(`Error pushing ${tableName}:`, error.message);
     }
 }
 
-export async function pullChanges(tableName: string, schemaTable: any) {
+export async function pullChanges<T extends AnySQLiteTable>(tableName: string, schemaTable: T & { syncStatus: any; localId: any }) {
     const db = getDb();
     const metadata = await db.select().from(syncMetadata).where(eq(syncMetadata.tableName, tableName));
-    const lastSyncDate = metadata[0]?.lastSyncedAt ? new Date(metadata[0].lastSyncedAt).toISOString() : new Date(0).toISOString();
 
-    const { data: cloudData, error } = await supabase.from(tableName).select("*").gt("updated_at", lastSyncDate);
+    const lastSyncTs = metadata[0]?.lastSyncedAt ?? 0;
+    const lastSyncDate = new Date(lastSyncTs).toISOString();
+
+    const { data: cloudData, error } = await supabase.from(tableName).select("*").gt("updated_at", lastSyncDate).order("updated_at", { ascending: true });
 
     if (error) {
         console.error(`Error pulling ${tableName}:`, error.message);
@@ -42,25 +59,35 @@ export async function pullChanges(tableName: string, schemaTable: any) {
     }
 
     if (cloudData && cloudData.length > 0) {
-        for (const item of cloudData) {
-            try {
-                const localItem = mapToCamelCase(item);
+        let latestProcessedTs = lastSyncTs;
+        try {
+            await db.transaction(async (tx) => {
+                for (const item of cloudData) {
+                    const localItem = mapToCamelCase(item);
 
-                if (tableName === "workout_plans") {
-                    localItem.workoutDaysPerWeek = item.days_per_week;
+                    if (tableName === "workout_plans") localItem.workoutDaysPerWeek = item.days_per_week;
+
+                    localItem.syncStatus = "synced";
+
+                    const { localId, ...updateFields } = localItem;
+                    await tx
+                        .insert(schemaTable)
+                        .values(localItem as any)
+                        .onConflictDoUpdate({ target: schemaTable.localId, set: updateFields as any });
+
+                    const recordTs = new Date(item.updated_at).getTime();
+                    if (recordTs > latestProcessedTs) {
+                        latestProcessedTs = recordTs;
+                    }
                 }
+            });
 
-                localItem.syncStatus = "synced";
-
-                await db.insert(schemaTable).values(localItem).onConflictDoUpdate({ target: schemaTable.localId, set: localItem });
-            } catch (dbError) {
-                console.error(`Database Insert Error for ${tableName}:`, dbError);
-            }
+            await db
+                .insert(syncMetadata)
+                .values({ tableName, lastSyncedAt: latestProcessedTs })
+                .onConflictDoUpdate({ target: syncMetadata.tableName, set: { lastSyncedAt: latestProcessedTs } });
+        } catch (dbError) {
+            console.error(`Database Pull Error for ${tableName}:`, dbError);
         }
-
-        await db
-            .insert(syncMetadata)
-            .values({ tableName, lastSyncedAt: Date.now() })
-            .onConflictDoUpdate({ target: syncMetadata.tableName, set: { lastSyncedAt: Date.now() } });
     }
 }

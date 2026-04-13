@@ -25,12 +25,12 @@ function RootLayout() {
     const expoDB = getExpoDb();
     const drizzleDB = getDb();
 
-    useSync();
-
     const [fontsLoaded, fontError] = useFonts(fonts);
 
     const { error, success } = useMigrations(drizzleDB, migrations);
     useDrizzleStudio(success ? expoDB : null);
+
+    useSync({ enabled: success });
 
     const isReady = (fontsLoaded || fontError) && (success || error);
 

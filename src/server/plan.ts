@@ -157,6 +157,7 @@ export async function saveWorkoutPlan(data: SavePlanInput) {
                         goal: data.goal ?? null,
                         fitnessLevel: data.fitnessLevel ?? null,
                         isDeleted: false,
+                        updatedAt: new Date().toISOString()
                     })
                     .where(eq(schema.workoutPlans.localId, currentPlanId));
 
@@ -223,11 +224,11 @@ export async function saveWorkoutPlan(data: SavePlanInput) {
                 }
 
                 if (dayIdsToRestore.length > 0) {
-                    await tx.update(schema.workoutDays).set({ isDeleted: false }).where(inArray(schema.workoutDays.localId, dayIdsToRestore));
+                    await tx.update(schema.workoutDays).set({ isDeleted: false, updatedAt: new Date().toISOString() }).where(inArray(schema.workoutDays.localId, dayIdsToRestore));
                 }
 
                 if (dayIdsToSoftDelete.length > 0) {
-                    await tx.update(schema.workoutDays).set({ isDeleted: true }).where(inArray(schema.workoutDays.localId, dayIdsToSoftDelete));
+                    await tx.update(schema.workoutDays).set({ isDeleted: true, updatedAt: new Date().toISOString() }).where(inArray(schema.workoutDays.localId, dayIdsToSoftDelete));
                 }
 
                 const existingExercisesByKey = new Map<string, typeof existingExercises>();
@@ -270,6 +271,7 @@ export async function saveWorkoutPlan(data: SavePlanInput) {
                                 type: desiredExercise.type,
                                 variant: desiredExercise.variant,
                                 isDeleted: false,
+                                updatedAt: new Date().toISOString(),
                             })
                             .where(eq(schema.exercises.localId, existingExercise.localId));
                     } else {
@@ -301,7 +303,7 @@ export async function saveWorkoutPlan(data: SavePlanInput) {
                     .map((exercise) => exercise.localId);
 
                 if (exerciseIdsToSoftDelete.length > 0) {
-                    await tx.update(schema.exercises).set({ isDeleted: true }).where(inArray(schema.exercises.localId, exerciseIdsToSoftDelete));
+                    await tx.update(schema.exercises).set({ isDeleted: true, updatedAt: new Date().toISOString() }).where(inArray(schema.exercises.localId, exerciseIdsToSoftDelete));
                 }
 
                 return { success: true as const, planId };

@@ -289,7 +289,7 @@ export async function logExerciseSet(data: LogData): Promise<LogResult> {
 
                 const perfectDay = computePerfectDay(data.activePlan, sessionWithLogs);
 
-                await tx.update(schema.workoutSessions).set({ perfectDay }).where(eq(schema.workoutSessions.localId, sessionId));
+                await tx.update(schema.workoutSessions).set({ perfectDay, updatedAt: new Date().toISOString() }).where(eq(schema.workoutSessions.localId, sessionId));
 
                 if (perfectDay) {
                     const streakResult = await updateStreak(db, data.activePlan);
@@ -355,6 +355,7 @@ async function updateStreak(db: DB, activePlan: WorkoutPlanWithDays): Promise<{ 
                     currentStreak: 1,
                     longestStreak: updatedLongest,
                     lastStreakAwardedAt: todayKey,
+                    updatedAt: new Date().toISOString(),
                 })
                 .where(eq(schema.users.localId, activePlan.userId));
 
@@ -374,6 +375,7 @@ async function updateStreak(db: DB, activePlan: WorkoutPlanWithDays): Promise<{ 
                 currentStreak: newStreak,
                 longestStreak: newLongest,
                 lastStreakAwardedAt: todayKey,
+                updatedAt: new Date().toISOString(),
             })
             .where(eq(schema.users.localId, activePlan.userId));
 

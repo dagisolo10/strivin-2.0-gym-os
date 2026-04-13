@@ -13,5 +13,11 @@ export async function updateUser(userId: string, data: UpdateUserData) {
 
     const db = getDb();
 
-    return enqueueWrite(() => db.update(users).set(data).where(eq(users.localId, userId)).returning());
+    return enqueueWrite(() =>
+        db
+            .update(users)
+            .set({ ...data, updatedAt: new Date().toISOString() })
+            .where(eq(users.localId, userId))
+            .returning(),
+    );
 }
