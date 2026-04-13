@@ -3,10 +3,14 @@ import { syncMetadata } from "./sqlite";
 
 import { eq, inArray } from "drizzle-orm";
 import { supabase } from "@/lib/supabase";
+import NetInfo from "@react-native-community/netinfo";
 import { AnySQLiteTable } from "drizzle-orm/sqlite-core";
 import { mapToSnakeCase, mapToCamelCase } from "@/lib/helper-functions";
 
 export async function pushChanges<T extends AnySQLiteTable>(tableName: string, schemaTable: T & { syncStatus: any; localId: any }) {
+    const state = await NetInfo.fetch();
+    if (!state.isConnected) return;
+
     const db = getDb();
     const pendingRecords = await db.select().from(schemaTable).where(eq(schemaTable.syncStatus, "pending"));
 
@@ -46,7 +50,10 @@ export async function pushChanges<T extends AnySQLiteTable>(tableName: string, s
     }
 }
 
-export async function pullChanges<T extends AnySQLiteTable>(tableName: string, schemaTable: T & { syncStatus: any; localId: any }) {
+export async function pullChanges<T extends AnySQLiteTable>(tableName: string, schemaTable: T & { syncStatus: any; localId: any; updatedAt: any }) {
+    const state = await NetInfo.fetch();
+    if (!state.isConnected) return;
+
     const db = getDb();
     const metadata = await db.select().from(syncMetadata).where(eq(syncMetadata.tableName, tableName));
 
@@ -63,17 +70,35 @@ export async function pullChanges<T extends AnySQLiteTable>(tableName: string, s
         let latestProcessedTs = lastSyncTs;
         try {
             await db.transaction(async (tx) => {
-                for (const item of cloudData) {
-                    const localItem = mapToCamelCase(item, tableName);
+                for (const data of cloudData) {
+                    const localItem = mapToCamelCase(data, tableName);
 
-                    const [existingLocal] = await tx.select({ syncStatus: schemaTable.syncStatus }).from(schemaTable).where(eq(schemaTable.localId, localItem.localId)).limit(1);
+                    const [existingLocal] = await tx
+                        .select({
+                            syncStatus: schemaTable.syncStatus,
+                            updatedAt: schemaTable.updatedAt,
+                        })
+                        .from(schemaTable)
+                        .where(eq(schemaTable.localId, localItem.localId))
+                        .limit(1);
 
                     if (existingLocal?.syncStatus === "pending") {
-                        console.log(`Skipping pull for ${tableName}:${localItem.localId} because local is pending.`);
-                        continue;
+                        const localTime = new Date(existingLocal.updatedAt).getTime();
+                        const cloudTime = new Date(data.updated_at).getTime();
+
+                        if (localTime >= cloudTime) {
+                            console.log(`[Conflict] Keeping local for ${tableName}:${localItem.localId} (Local is newer)`);
+                            continue;
+                        } else {
+                            console.log(`[Conflict] Cloud wins for ${tableName}:${localItem.localId} (Cloud is newer)`);
+                        }
                     }
 
-                    if (tableName === "workout_plans") localItem.workoutDaysPerWeek = item.days_per_week;
+                    if (tableName === "workout_plans") localItem.workoutDaysPerWeek = data.days_per_week;
+
+                    if (localItem.date && typeof localItem.date === "string") {
+                        localItem.date = localItem.date.split("T")[0];
+                    }
 
                     localItem.syncStatus = "synced";
 
@@ -83,7 +108,7 @@ export async function pullChanges<T extends AnySQLiteTable>(tableName: string, s
                         .values(localItem as any)
                         .onConflictDoUpdate({ target: schemaTable.localId, set: updateFields as any });
 
-                    const recordTs = new Date(item.updated_at).getTime();
+                    const recordTs = new Date(data.updated_at).getTime();
                     if (recordTs > latestProcessedTs) {
                         latestProcessedTs = recordTs;
                     }

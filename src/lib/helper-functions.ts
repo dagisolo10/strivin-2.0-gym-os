@@ -1,9 +1,5 @@
 import { DAY_ORDER } from "@/constants/data";
 
-export function getDateKeys(date = new Date()) {
-    return date.toISOString().slice(0, 10);
-}
-
 export function getDateKey(date: Date | string = new Date()) {
     const d = typeof date === "string" ? new Date(date) : date;
     return d.toISOString().split("T")[0];

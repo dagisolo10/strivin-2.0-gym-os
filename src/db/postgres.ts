@@ -1,8 +1,8 @@
-import { boolean, pgTable, real, text, integer, timestamp } from "drizzle-orm/pg-core";
+import { bigint, boolean, pgTable, real, text, integer, timestamp } from "drizzle-orm/pg-core";
 
 export const syncMetadata = pgTable("sync_metadata", {
     tableName: text("table_name").primaryKey(),
-    lastSyncedAt: integer("last_synced_at").notNull(),
+    lastSyncedAt: bigint("last_synced_at", { mode: "number" }).notNull(),
 });
 
 export const users = pgTable("users", {
@@ -21,7 +21,7 @@ export const users = pgTable("users", {
     createdAt: timestamp("created_at").defaultNow(),
 
     syncStatus: text("sync_status").$type<SyncStatus>().default("synced").notNull(),
-    updatedAt: timestamp("updated_at").defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
 });
 
 export const workoutPlans = pgTable("workout_plans", {
@@ -41,7 +41,7 @@ export const workoutPlans = pgTable("workout_plans", {
 
     syncStatus: text("sync_status").$type<SyncStatus>().default("synced").notNull(),
     isDeleted: boolean("is_deleted").default(false),
-    updatedAt: timestamp("updated_at").defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
 });
 
 export const workoutDays = pgTable("workout_days", {
@@ -62,7 +62,7 @@ export const workoutDays = pgTable("workout_days", {
 
     syncStatus: text("sync_status").$type<SyncStatus>().default("synced").notNull(),
     isDeleted: boolean("is_deleted").default(false),
-    updatedAt: timestamp("updated_at").defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
 });
 
 export const exercises = pgTable("exercises", {
@@ -98,7 +98,7 @@ export const exercises = pgTable("exercises", {
 
     syncStatus: text("sync_status").$type<SyncStatus>().default("synced").notNull(),
     isDeleted: boolean("is_deleted").default(false),
-    updatedAt: timestamp("updated_at").defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
 });
 
 export const workoutSessions = pgTable("workout_sessions", {
@@ -117,7 +117,7 @@ export const workoutSessions = pgTable("workout_sessions", {
 
     syncStatus: text("sync_status").$type<SyncStatus>().default("synced").notNull(),
     isDeleted: boolean("is_deleted").default(false),
-    updatedAt: timestamp("updated_at").defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
 });
 
 export const exerciseLogs = pgTable("exercise_logs", {
@@ -148,5 +148,5 @@ export const exerciseLogs = pgTable("exercise_logs", {
 
     syncStatus: text("sync_status").$type<SyncStatus>().default("synced").notNull(),
     isDeleted: boolean("is_deleted").default(false),
-    updatedAt: timestamp("updated_at").defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
 });

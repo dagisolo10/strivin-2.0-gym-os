@@ -20,7 +20,16 @@ export async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 3, baseDe
         } catch (error: any) {
             lastError = error;
 
-            if (error.message?.includes("constraint") || error.status === 400) throw error;
+            const msg = error.message?.toLowerCase() ?? "";
+            const isConstraintError =
+                msg.includes("constraint") ||
+                msg.includes("duplicate key") ||
+                msg.includes("unique violation") ||
+                msg.includes("violates foreign key") ||
+                error.code === "23505" ||
+                error.code === "23503" ||
+                error.status === 400;
+            if (isConstraintError) throw error;
 
             if (attempt < maxAttempts) {
                 const waitTime = baseDelay * Math.pow(2, attempt - 1); // 1s, 2s, 4s

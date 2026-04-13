@@ -28,8 +28,6 @@ interface CardProp {
 }
 
 function ExerciseCard({ userId, exercise, logs, onPress, expandedId, selectedDayName, onExerciseDeleted, onExerciseLogged }: CardProp) {
-    // console.log(JSON.stringify({ name: exercise.name, exId: exercise.localId }, null, 4));
-    // console.log(JSON.stringify({ exLogs: logs }));
 
     const { activePlan } = usePlan();
     const { todaysLogs } = useWorkoutLogs();

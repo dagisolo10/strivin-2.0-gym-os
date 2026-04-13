@@ -21,9 +21,7 @@ export function useHomeData(selectedDayName: Weekday | undefined, { activePlan, 
 
         const todaysSession = sessions.find((session) => session.date === todayKey);
 
-        const todaysSessionIds = sessions.filter((session) => session.date === todayKey).map((s) => s.localId);
-
-        const todaysLogs = logs.filter((log) => todaysSessionIds.includes(log.sessionId));
+        const todaysLogs = logs.filter((log) => todaysSession?.localId === log.sessionId);
 
         const todaysLogsByExerciseId = todaysLogs.reduce<Record<string, ExerciseLog[]>>((acc, log) => {
             acc[log.exerciseId] = [...(acc[log.exerciseId] ?? []), log];

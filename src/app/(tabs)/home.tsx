@@ -49,7 +49,7 @@ export default function HomeScreen() {
     if (isLoading) return <LoadingScreen />;
 
     if (!user || !localUserId) {
-        const debugInfo = __DEV__ ? ` Debug Info: ${JSON.stringify(user ?? "No Local User Found")}` : "";
+        const debugInfo = __DEV__ ? `Debug Info: ${JSON.stringify(user ?? "No Local User Found")}` : "";
         return <ErrorScreen message={`Session not available. Please sign in again. ${debugInfo}`} href="/(auth)/sign-in" button="Go to sign in" />;
     }
 

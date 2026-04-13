@@ -29,19 +29,21 @@ export function useSync({ enabled }: { enabled: boolean }) {
             ];
 
             for (const table of tables) {
-                console.log(`Syncing ${table.tableName}...`);
-                await withRetry(async () => {
-                    await pushChanges(table.tableName, table.table);
-                    await pullChanges(table.tableName, table.table);
-                });
-                console.log(`Successfully synced ${table.tableName}`);
+                try {
+                    console.log(`🕛 Syncing ${table.tableName}...`);
+                    await withRetry(async () => {
+                        await pushChanges(table.tableName, table.table);
+                        await pullChanges(table.tableName, table.table);
+                    });
+                    console.log(`✅ Successfully synced ${table.tableName}`);
+                } catch (tableError) {
+                    setLastError(tableError as Error);
+                    console.error(`❌ Failed to sync ${table.tableName}:`, tableError);
+                }
             }
 
             setLastSyncTime(new Date());
-            console.log("Sync Complete!");
-        } catch (e: any) {
-            setLastError(e);
-            console.error("Sync aborted due to critical error:", e);
+            console.log("✅ Sync Complete!");
         } finally {
             isSyncing.current = false;
             setIsSyncingState(false);
@@ -50,13 +52,6 @@ export function useSync({ enabled }: { enabled: boolean }) {
 
     useEffect(() => {
         if (!enabled) return;
-
-        const syncInitial = async () => {
-            const state = await NetInfo.fetch();
-            if (state.isConnected && state.isInternetReachable) await performFullSync();
-        };
-
-        syncInitial();
 
         const unsubscribe = NetInfo.addEventListener((state) => {
             if (state.isInternetReachable && state.isConnected) {

@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator } from "react-native";
 import { Badge, Div, H1, H2, P, Row, Screen } from "@/components/ui/display";
 
 export default function StartupLoadingScreen() {
@@ -28,7 +28,7 @@ export default function StartupLoadingScreen() {
 
                 <Row className="items-center justify-center gap-3">
                     {Array.from({ length: 3 }).map((_, index) => (
-                        <View key={index} className={cn("size-3 rounded-full", dotCount > index ? "bg-primary" : "bg-muted")} />
+                        <Div key={index} className={cn("size-3 rounded-full", dotCount > index ? "bg-primary" : "bg-muted")} />
                     ))}
                 </Row>
 
