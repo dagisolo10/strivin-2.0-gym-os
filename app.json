@@ -8,7 +8,11 @@
         "scheme": "strivin",
         "userInterfaceStyle": "automatic",
         "ios": {
-            "supportsTablet": true
+            "supportsTablet": true,
+            "bundleIdentifier": "com.dagisolo.Strivin",
+            "infoPlist": {
+                "ITSAppUsesNonExemptEncryption": false
+            }
         },
         "android": {
             "adaptiveIcon": {
@@ -18,7 +22,8 @@
                 "monochromeImage": "./assets/logo/logo.png"
             },
             "predictiveBackGestureEnabled": false,
-            "package": "com.dagisolo.strivin_gym"
+            "package": "com.dagisolo.strivin_gym",
+            "permissions": ["android.permission.RECORD_AUDIO"]
         },
         "web": {
             "output": "single",
@@ -77,9 +82,14 @@
         "extra": {
             "router": {},
             "eas": {
-                "projectId": "e4c420c7-cd9c-4abe-bc33-8157b4f1034f"
+                "projectId": "3a27db09-d6a2-4433-8e52-93cad6f70078"
             }
         },
-        "owner": "dagisolo"
+        "updates": {
+            "url": "https://u.expo.dev/3a27db09-d6a2-4433-8e52-93cad6f70078"
+        },
+        "runtimeVersion": {
+            "policy": "appVersion"
+        }
     }
 }
