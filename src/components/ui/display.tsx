@@ -17,7 +17,7 @@ interface TypographyProps extends TextProps {
 
 export const Screen = ({ className, children, nonScrollable = false, ...props }: ThemedViewProps & { nonScrollable?: boolean }) => (
     <SafeAreaView className="bg-dead-zone flex-1">
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1">
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
             {nonScrollable ? (
                 <Div className={cn("bg-background flex-1 px-6 py-8", className)} {...props}>
                     {children}
